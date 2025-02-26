@@ -42,7 +42,7 @@ export class DeckDropGame extends SingletonAction<GameSettings> {
       coordinates: ev.action.coordinates,
       settings: ev.payload.settings
     });
-    
+     
     // Check if this is the controller button (top-left)
     if (ev.action.coordinates && 
         ev.action.coordinates.column === 0 && 
@@ -81,6 +81,7 @@ export class DeckDropGame extends SingletonAction<GameSettings> {
     }
   }
 
+  hasAlreadySwitched: boolean = false;
   /**
    * Occurs when the action's key is pressed down
    */
@@ -91,57 +92,71 @@ export class DeckDropGame extends SingletonAction<GameSettings> {
       coordinates: ev.action.coordinates,
       settings: ev.payload.settings
     });
-    
-  // Check if this is the controller button
-  const isController = ev.payload.settings?.isController || false;
 
-  if (isController) {
-    // Controller button logic - update the button below
-    streamDeck.logger.info('Controller button pressed');
-    
-    if (ev.action.coordinates) {
-      const targetCol = ev.action.coordinates.column;
-      const targetRow = ev.action.coordinates.row + 1; // Button below
-      
-      // Only proceed if target row is valid
-      if (targetRow < 3) {
-        // Toggle the state of the target cell
-        this.toggleCellState(targetCol, targetRow);
-        
-        // Save game state and refresh
-        await this.saveGameState(ev.action);
-        await this.refreshDeck(ev.action);
-      } 
-    }
-    return;
-  }
-    
-    // Regular game button logic
-    if (this.gameOver) {
-      // Reset game if game is over
-      this.resetGame();
-      await this.saveGameState(ev.action);
-      
-      // Force all buttons to refresh by switching profiles
-      await this.refreshDeck(ev.action);
-      return;
-    }
+    ev.action.setState(1);
 
-    // Get position from coordinates
-    if (ev.action.coordinates) {
-      const col = ev.action.coordinates.column;
+
+  //    // Then switch to your DeckDrop profile for all connected devices
+  //    if (!this.hasAlreadySwitched) {
+  //     streamDeck.devices.forEach(device => {
+  //         streamDeck.profiles.switchToProfile(device.id, "DeckDrop");
+  //         streamDeck.logger.info(`Switched to DeckDrop profile on device ${device.id}`);
+  //     });
+  //     this.hasAlreadySwitched = true;
+  //    }
+
+  //     // Check if this is the controller button
+  // const isController = ev.payload.settings?.isController || false;
+
+  // if (isController) {
+  //   // Controller button logic - update the button below
+  //   streamDeck.logger.info('Controller button pressed');
+    
+  //   if (ev.action.coordinates) { 
+  //     const targetCol = ev.action.coordinates.column;
+  //     const targetRow = ev.action.coordinates.row + 1; // Button below
       
-      // Make move in the selected column
-      const success = this.makeMove(col);
-      
-      if (success) {
-        // Save updated game state
-        await this.saveGameState(ev.action);
+  //     // Only proceed if target row is valid
+  //     if (targetRow < 3) {
+  //       // Toggle the state of the target cell
+  //       this.toggleCellState(targetCol, targetRow);
         
-        // Force all buttons to refresh by switching profiles
-        await this.refreshDeck(ev.action);
-      }
-    }
+  //       this.updateButtonVisual(ev.action, 0, 1)
+
+  //       // Save game state and refresh
+  //       await this.saveGameState(ev.action); 
+  //       await this.refreshDeck(ev.action);
+  //     } 
+  //   }
+  //   return;
+  // }
+    
+  //   // Regular game button logic
+  //   if (this.gameOver) {
+  //     // Reset game if game is over
+  //     this.resetGame();
+  //     await this.saveGameState(ev.action);
+      
+  //     // Force all buttons to refresh by switching profiles
+  //     await this.refreshDeck(ev.action);
+  //     return;
+  //   }
+
+  //   // Get position from coordinates
+  //   if (ev.action.coordinates) {
+  //     const col = ev.action.coordinates.column;
+      
+  //     // Make move in the selected column
+  //     const success = this.makeMove(col);
+      
+  //     if (success) {
+  //       // Save updated game state
+  //       await this.saveGameState(ev.action);
+        
+  //       // Force all buttons to refresh by switching profiles
+  //       await this.refreshDeck(ev.action);
+  //     }
+  //   }
   }
   
   /**
@@ -265,7 +280,7 @@ private async refreshDeck(action: any): Promise<void> {
       return;
     }
     
-    const cell = this.board[column][row];
+    const cell = 1;//this.board[column][row];
     
     // Set image based on cell state
     let imagePath;
@@ -289,13 +304,6 @@ private async refreshDeck(action: any): Promise<void> {
           break;
         }
       }
-      
-      // Uncomment if you want to add highlighting
-      // if (isTopEmptyInColumn) {
-      //   imagePath = this.currentPlayer === PLAYER_ONE 
-      //     ? 'imgs/actions/deckdrop/empty_slot_highlight_red.svg'
-      //     : 'imgs/actions/deckdrop/empty_slot_highlight_yellow.svg';
-      // }
     }
     
     try {
