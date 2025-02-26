@@ -1,0 +1,41 @@
+{
+	"Name": "deckdrop",
+	"Version": "0.1.0.0",
+	"Author": "Patrick Kalkman",
+	"Actions": [
+		{
+			"UUID": "com.practical-engineer.deckdrop.game",
+			"Icon": "imgs/actionIcon",
+			"Name": "DeckDrop",
+			"States": [
+				{
+					"Image": "imgs/actions/deckdrop/empty-slot"
+				}
+			]
+		}
+	],
+	"Category": "deckdrop",
+	"CategoryIcon": "imgs/plugin/category-icon",
+	"CodePath": "bin/plugin.js",
+	"Description": "DeckDrop is an interactive Connect Four game that transforms your Stream Deck into a physical gaming board. Players take turns pressing buttons to drop tokens, aiming to connect three in a row on the 5x3 grid. Future versions will include AI opponents using deep reinforcement learning. Perfect for quick gaming breaks or demonstrating the creative potential of Stream Deck beyond streaming controls.",
+	"Icon": "imgs/plugin/marketplace",
+	"SDKVersion": 2,
+	"Software": {
+		"MinimumVersion": "6.4"
+	},
+	"OS": [
+		{
+			"Platform": "mac",
+			"MinimumVersion": "12"
+		},
+		{
+			"Platform": "windows",
+			"MinimumVersion": "10"
+		}
+	],
+	"Nodejs": {
+		"Version": "20",
+		"Debug": "enabled"
+	},
+	"UUID": "com.practical-engineer.deckdrop"
+}
