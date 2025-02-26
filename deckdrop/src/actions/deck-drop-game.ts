@@ -233,6 +233,31 @@ private async refreshDeck(action: any): Promise<void> {
   }
 }
 
+/**
+ * Update visuals for all buttons in the game grid
+ */
+private async updateAllButtons(action: any): Promise<void> {
+  // Get the device from the current action
+  const device = action.device;
+  
+  // Update all buttons using our action lookup map
+  const updatedActions = [];
+  
+  for (let col = 0; col < 5; col++) {
+    for (let row = 0; row < 3; row++) {
+      const key = this.getCoordinateKey(col, row);
+      const actionInstance = this.actionLookup.get(key);
+      
+      if (actionInstance) {
+        await this.updateButtonVisual(actionInstance, col, row);
+        updatedActions.push(key);
+      }
+    }
+  }
+  
+  streamDeck.logger.info(`Found ${updatedActions.length} actions to update`);
+}
+
   /**
    * Make a move in the specified column
    */
