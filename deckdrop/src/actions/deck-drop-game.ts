@@ -24,7 +24,7 @@ type ActionMap = Map<CoordinateKey, any>;
 
 @action({ UUID: "com.practical-engineer.deckdrop.game" })
 export class DeckDropGame extends SingletonAction<GameSettings> {
-  // Game board (5 columns × 3 rows)
+  // Game board (5 rows × 3 columns)
   private board: number[][] = [
     [EMPTY, EMPTY, EMPTY, EMPTY, EMPTY], // Row 0
     [EMPTY, EMPTY, EMPTY, EMPTY, EMPTY], // Row 1
