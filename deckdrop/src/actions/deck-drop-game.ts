@@ -142,17 +142,17 @@ export class DeckDropGame extends SingletonAction<GameSettings> {
   }
   
   /**
-   * Toggle cell state between empty and Player One
+   * Toggle cell state between empty and specified player
    */
-  private toggleCellState(col: number, row: number): void {
+  private toggleCellState(col: number, row: number, player: number = PLAYER_ONE): void {
     // Ensure column and row are within bounds
     if (col < 0 || col >= 5 || row < 0 || row >= 3) {
       streamDeck.logger.info(`Invalid coordinates: [${col}, ${row}]`);
       return;
     }
     
-    // Toggle between empty and Player One
-    this.board[col][row] = this.board[col][row] === EMPTY ? PLAYER_ONE : EMPTY;
+    // Toggle between empty and specified player
+    this.board[col][row] = this.board[col][row] === EMPTY ? player : EMPTY;
     
     streamDeck.logger.info(`Toggled cell at [${col}, ${row}] to ${this.board[col][row]}`);
     streamDeck.logger.info('Current board:', JSON.stringify(this.board));
