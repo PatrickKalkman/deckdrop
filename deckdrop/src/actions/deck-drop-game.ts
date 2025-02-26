@@ -1,4 +1,4 @@
-import { action, KeyDownEvent, SingletonAction, WillAppearEvent, WillDisappearEvent } from "@elgato/streamdeck";
+import streamDeck, { action, KeyDownEvent, SingletonAction, WillAppearEvent, WillDisappearEvent } from "@elgato/streamdeck";
 
 // Game states
 const EMPTY = 0;
@@ -30,7 +30,7 @@ export class DeckDropGame extends SingletonAction<GameSettings> {
  */
 override async onWillAppear(ev: WillAppearEvent<GameSettings>): Promise<void> {
   // Log event info for debugging
-  console.log('Action appeared:', {
+  streamDeck.logger.info('Action appeared:', {
     actionId: ev.action.id,
     deviceId: ev.action.device.id,
     coordinates: ev.action.coordinates,
@@ -43,14 +43,14 @@ override async onWillAppear(ev: WillAppearEvent<GameSettings>): Promise<void> {
     this.currentPlayer = ev.payload.settings.currentPlayer;
     this.gameOver = ev.payload.settings.gameOver;
     
-    console.log('Loaded saved game state');
+    streamDeck.logger.info('Loaded saved game state');
   } else {
     // Initialize new game
     this.resetGame();
     
     // Save initial game state
     await this.saveGameState(ev.action);
-    console.log('Initialized new game');
+    streamDeck.logger.info('Initialized new game');
   }
 
   // Update all buttons to ensure consistent state
@@ -62,7 +62,7 @@ override async onWillAppear(ev: WillAppearEvent<GameSettings>): Promise<void> {
    */
   override async onKeyDown(ev: KeyDownEvent<GameSettings>): Promise<void> {
     // Log key press for debugging
-    console.log('Key pressed:', {
+    streamDeck.logger.info('Key pressed:', {
       actionId: ev.action.id,
       deviceId: ev.action.device.id,
       coordinates: ev.action.coordinates,
@@ -97,7 +97,7 @@ override async onWillAppear(ev: WillAppearEvent<GameSettings>): Promise<void> {
    * Occurs when the action is removed from Stream Deck
    */
   override onWillDisappear(ev: WillDisappearEvent<GameSettings>): void {
-    console.log('Action disappeared');
+    streamDeck.logger.info('Action disappeared');
     // Any cleanup needed when the action is removed
   }
 
@@ -121,19 +121,19 @@ override async onWillAppear(ev: WillAppearEvent<GameSettings>): Promise<void> {
     this.board[column][row] = this.currentPlayer;
     
     // Log the move for debugging
-    console.log(`Player ${this.currentPlayer} placed at [${column}, ${row}]`);
-    console.log('Current board:', JSON.stringify(this.board));
+    streamDeck.logger.info(`Player ${this.currentPlayer} placed at [${column}, ${row}]`);
+    streamDeck.logger.info('Current board:', JSON.stringify(this.board));
     
     // Check for winner
     if (this.checkWinner(column, row)) {
-      console.log(`Player ${this.currentPlayer} wins!`);
+      streamDeck.logger.info(`Player ${this.currentPlayer} wins!`);
       this.gameOver = true;
       return true;
     }
     
     // Check for draw
     if (this.isBoardFull()) {
-      console.log('Game ended in a draw');
+      streamDeck.logger.info('Game ended in a draw');
       this.gameOver = true;
       return true;
     }
@@ -156,7 +156,7 @@ override async onWillAppear(ev: WillAppearEvent<GameSettings>): Promise<void> {
     ];
     this.currentPlayer = PLAYER_ONE;
     this.gameOver = false;
-    console.log('Game reset');
+    streamDeck.logger.info('Game reset');
   }
 
   /**
@@ -180,7 +180,7 @@ private async updateAllButtons(action: any): Promise<void> {
   // Get all instances of this action on the device
   const actions = await device.getActions();
   
-  console.log(`Found ${actions.length} actions to update`);
+  streamDeck.logger.info(`Found ${actions.length} actions to update`);
   
   // Update each action instance
   for (const actionInstance of actions) {
@@ -204,7 +204,7 @@ private async updateAllButtons(action: any): Promise<void> {
 private async updateButtonVisual(action: any, column: number, row: number): Promise<void> {
   // Ensure column and row are within bounds
   if (column < 0 || column >= 5 || row < 0 || row >= 3) {
-    console.log(`Invalid coordinates: [${column}, ${row}]`);
+    streamDeck.logger.info(`Invalid coordinates: [${column}, ${row}]`);
     return;
   }
   
@@ -246,7 +246,7 @@ private async updateButtonVisual(action: any, column: number, row: number): Prom
       return action.setImage(imagePath);
     }
   } catch (error) {
-    console.error(`Error setting image: ${error}`);
+    streamDeck.logger.error(`Error setting image: ${error}`);
   }
 }
 
