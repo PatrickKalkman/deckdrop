@@ -206,27 +206,31 @@ export class DeckDropGame extends SingletonAction<GameSettings> {
     }
     
     // Check diagonal (top-left to bottom-right)
-    for (let r = 0; r < 3; r++) {
-      for (let c = 0; c < 1; c++) {
-        if (
-          this.board[r][c] === player &&
-          this.board[r+1][c+1] === player &&
-          this.board[r+2][c+2] === player
-        ) {
-          return true;
+    for (let r = 0; r <= 0; r++) { // Can only start from row 0
+      for (let c = 0; c <= 2; c++) { // Can only start from columns 0, 1, or 2
+        if (r+2 < 3 && c+2 < 5) { // Make sure we don't go out of bounds
+          if (
+            this.board[r][c] === player &&
+            this.board[r+1][c+1] === player &&
+            this.board[r+2][c+2] === player
+          ) {
+            return true;
+          }
         }
       }
     }
     
     // Check diagonal (bottom-left to top-right)
-    for (let c = 0; c < 3; c++) {
-      for (let r = 2; r > 1; r--) {
-        if (
-          this.board[r][c] === player &&
-          this.board[r-1][c+1] === player &&
-          this.board[r-2][c+2] === player
-        ) {
-          return true;
+    for (let r = 2; r >= 2; r--) { // Can only start from row 2
+      for (let c = 0; c <= 2; c++) { // Can only start from columns 0, 1, or 2
+        if (r-2 >= 0 && c+2 < 5) { // Make sure we don't go out of bounds
+          if (
+            this.board[r][c] === player &&
+            this.board[r-1][c+1] === player &&
+            this.board[r-2][c+2] === player
+          ) {
+            return true;
+          }
         }
       }
     }
