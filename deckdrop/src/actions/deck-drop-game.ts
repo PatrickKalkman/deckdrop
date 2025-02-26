@@ -6,13 +6,12 @@ import streamDeck, {
   WillDisappearEvent
 } from "@elgato/streamdeck";
 
-// Game states
+// Board states
 const EMPTY = 0; 
 const PLAYER_ONE = 1;
 const PLAYER_TWO = 2;
 
 type GameSettings = {
-  gameState: number[][];
   currentPlayer: number; 
   gameOver: boolean;
   isController: boolean; // Flag to identify controller button
@@ -33,13 +32,13 @@ export class DeckDropGame extends SingletonAction<GameSettings> {
   
   private currentPlayer: number = PLAYER_ONE;
   private gameOver: boolean = false;
-  
+
   // Map to store actions by coordinates
   private actionLookup: ActionMap = new Map();
   
   // Helper to create coordinate key
-  private getCoordinateKey(col: number, row: number): CoordinateKey {
-    return `${col},${row}`;
+  private getCoordinateKey(row: number, col: number): CoordinateKey {
+    return `${row},${col}`;
   }
 
   /**
@@ -57,26 +56,15 @@ export class DeckDropGame extends SingletonAction<GameSettings> {
     if (ev.action.coordinates) {
       const col = ev.action.coordinates.column;
       const row = ev.action.coordinates.row;
-      const key = this.getCoordinateKey(col, row);
+      const key = this.getCoordinateKey(row, col);
       this.actionLookup.set(key, ev.action);
-      streamDeck.logger.info(`Stored action at coordinates [${col}, ${row}]`);
+      streamDeck.logger.info(`Stored action at coordinates [${row}, ${col}]`);
     }
     
     // Load game state from settings if available
-    if (ev.payload.settings?.gameState) {
-      this.board = ev.payload.settings.gameState;
-      this.currentPlayer = ev.payload.settings.currentPlayer;
-      this.gameOver = ev.payload.settings.gameOver;
-      
-      streamDeck.logger.info('Loaded saved game state');
-    } else {
-      // Initialize new game
-      this.resetGame();
-      
-      // Save initial game state
-      await this.saveGameState(ev.action);
-      streamDeck.logger.info('Initialized new game');
-    }
+    this.currentPlayer = ev.payload.settings.currentPlayer;
+    this.gameOver = ev.payload.settings.gameOver;
+
     
     // Switch to the DeckDrop profile if we haven't already
     if (!this.hasProfileSwitched) {
@@ -123,44 +111,13 @@ export class DeckDropGame extends SingletonAction<GameSettings> {
     // Check if the pressed button is in the top row (row=0)
     if (ev.action.coordinates && ev.action.coordinates.row === 0) {
       const column = ev.action.coordinates.column;
-       
-      // Find the action at the same column but last row (row=2)
-      const targetKey = this.getCoordinateKey(column, 2);
-      const targetAction = this.actionLookup.get(targetKey);
-      
-      if (targetAction) {
-        this.makeMove(column);
-        
-        // Render the updated board state
-        this.renderBoard();
-        
-      } else {
-        streamDeck.logger.info(`No action found at coordinates [${column}, 2]`);
-      }
+      this.makeMove(column);
+      this.renderBoard();
     } else {
       // If it's not a button in the top row, do nothing
       streamDeck.logger.info('Button not in top row, no action taken');
     }
   }
-
-/**
- * Force all buttons to refresh by switching profiles
- */
-private async refreshDeck(action: any): Promise<void> {
-  try {
-    const deviceId = action.device.id;
-    
-    // Save game state before refreshing
-    await this.saveGameState(action);
-    
-    // Switch to the same profile to force a refresh of all buttons
-    await streamDeck.profiles.switchToProfile(deviceId);
-    
-    streamDeck.logger.info('Refreshed deck');
-  } catch (error) {
-    streamDeck.logger.error('Failed to refresh deck:', error);
-  }
-}
 
   /**
    * Make a move in the specified column
@@ -219,24 +176,6 @@ private async refreshDeck(action: any): Promise<void> {
     this.gameOver = false;
     streamDeck.logger.info('Game reset');
   }
-
-  /**
-   * Save game state to action settings
-   */
-  private async saveGameState(action: any): Promise<GameSettings> {
-    const currentSettings = await action.getSettings() || {};
-    
-    const settings = {
-      ...currentSettings,
-      gameState: this.board,
-      currentPlayer: this.currentPlayer,
-      gameOver: this.gameOver
-    };
-    
-    await action.setSettings(settings);
-    return settings;
-  }
-
 
   /**
    * Check if the last move resulted in a win
@@ -314,10 +253,10 @@ private async refreshDeck(action: any): Promise<void> {
    */
   private async renderBoard(): Promise<void> {
     // Iterate through each cell in the board
-    for (let col = 0; col < 5; col++) {
-      for (let row = 0; row < 3; row++) {
+    for (let row = 0; row < 3; row++) {
+      for (let col = 0; col < 5; col++) {
         // Get the action for this coordinate
-        const key = this.getCoordinateKey(col, row);
+        const key = this.getCoordinateKey(row, col);
         const action = this.actionLookup.get(key);
         
         if (action) {
