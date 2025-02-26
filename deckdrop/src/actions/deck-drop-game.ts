@@ -12,6 +12,11 @@ const EMPTY = 0;
 const PLAYER_ONE = 1;
 const PLAYER_TWO = 2;
 
+// Image paths
+const EMPTY_SLOT_IMAGE = "imgs/actions/deckdrop/empty-slot.svg";
+const YELLOW_TOKEN_IMAGE = "imgs/actions/deckdrop/yellow-token-in-slot.svg";
+const RED_TOKEN_IMAGE = "imgs/actions/deckdrop/red-token-in-slot.svg";
+
 type GameSettings = {
   currentPlayer: number; 
   gameOver: boolean;
@@ -193,29 +198,44 @@ export class DeckDropGame extends SingletonAction<GameSettings> {
   }
 
   /**
+   * Sets an image on a button at the specified coordinates
+   * @param row Row coordinate
+   * @param col Column coordinate
+   * @param imagePath Path to the image
+   * @returns Promise that resolves when the image is set
+   */
+  private async setButtonImage(row: number, col: number, imagePath: string): Promise<boolean> {
+    const key = this.getCoordinateKey(row, col);
+    const action = this.actionLookup.get(key);
+    
+    if (!action) {
+      streamDeck.logger.info(`No action found for coordinates [${row}, ${col}]`);
+      return false;
+    }
+    
+    try {
+      await action.setImage(imagePath);
+      streamDeck.logger.info(`Set image for [${row}, ${col}] to ${imagePath}`);
+      return true;
+    } catch (error) {
+      streamDeck.logger.error(`Failed to set image for [${row}, ${col}]:`, error);
+      return false;
+    }
+  }
+
+  /**
    * Make the winning tokens blink
    * @param positions Array of [row, col] positions of winning tokens
    * @param player The player who won (PLAYER_ONE or PLAYER_TWO)
    */
   private async showWinner(positions: [number, number][], player: number): Promise<void> {
-    const emptyImage = "imgs/actions/deckdrop/empty-slot.svg";
-    const playerImage = player === PLAYER_ONE 
-      ? "imgs/actions/deckdrop/yellow-token-in-slot.svg" 
-      : "imgs/actions/deckdrop/red-token-in-slot.svg";
+    const playerImage = player === PLAYER_ONE ? YELLOW_TOKEN_IMAGE : RED_TOKEN_IMAGE;
     
     // Blink 5 times
     for (let i = 0; i < 5; i++) {
       // Set to empty
       for (const [row, col] of positions) {
-        const key = this.getCoordinateKey(row, col);
-        const action = this.actionLookup.get(key);
-        if (action) {
-          try {
-            await action.setImage(emptyImage);
-          } catch (error) {
-            streamDeck.logger.error(`Failed to set empty image for [${row}, ${col}]:`, error);
-          }
-        }
+        await this.setButtonImage(row, col, EMPTY_SLOT_IMAGE);
       }
       
       // Wait half a second
@@ -223,15 +243,7 @@ export class DeckDropGame extends SingletonAction<GameSettings> {
       
       // Set back to player token
       for (const [row, col] of positions) {
-        const key = this.getCoordinateKey(row, col);
-        const action = this.actionLookup.get(key);
-        if (action) {
-          try {
-            await action.setImage(playerImage);
-          } catch (error) {
-            streamDeck.logger.error(`Failed to set player image for [${row}, ${col}]:`, error);
-          }
-        }
+        await this.setButtonImage(row, col, playerImage);
       }
       
       // Wait half a second before next blink
@@ -246,36 +258,22 @@ export class DeckDropGame extends SingletonAction<GameSettings> {
     // Iterate through each cell in the board
     for (let row = 0; row < 3; row++) {
       for (let col = 0; col < 5; col++) {
-        // Get the action for this coordinate
-        const key = this.getCoordinateKey(row, col);
-        const action = this.actionLookup.get(key);
+        // Determine which image to show based on cell state
+        let imagePath = "";
+        switch (this.board[row][col]) {
+          case EMPTY:
+            imagePath = EMPTY_SLOT_IMAGE;
+            break;
+          case PLAYER_ONE:
+            imagePath = YELLOW_TOKEN_IMAGE;
+            break;
+          case PLAYER_TWO:
+            imagePath = RED_TOKEN_IMAGE;
+            break;
+        }
         
-        if (action) {
-          // Determine which image to show based on cell state
-          let imagePath = "";
-          switch (this.board[row][col]) {
-            case EMPTY:
-              imagePath = "imgs/actions/deckdrop/empty-slot.svg";
-              break;
-            case PLAYER_ONE:
-              imagePath = "imgs/actions/deckdrop/yellow-token-in-slot.svg";
-              break;
-            case PLAYER_TWO:
-              imagePath = "imgs/actions/deckdrop/red-token-in-slot.svg";
-              break;
-          }
-          
-          // Set the image for this button
-          if (imagePath) {
-            try {
-              await action.setImage(imagePath);
-              streamDeck.logger.info(`Set image for [${row}, ${col}] to ${imagePath}`);
-            } catch (error) {
-              streamDeck.logger.error(`Failed to set image for [${row}, ${col}]:`, error);
-            }
-          }
-        } else {
-          streamDeck.logger.info(`No action found for coordinates [${row}, ${col}]`);
+        if (imagePath) {
+          await this.setButtonImage(row, col, imagePath);
         }
       }
     }
