@@ -3,7 +3,8 @@ import streamDeck, {
   KeyDownEvent, 
   SingletonAction, 
   WillAppearEvent,
-  DeviceInfo 
+  DeviceInfo,
+  WillDisappearEvent
 } from "@elgato/streamdeck";
 
 // Game states
@@ -18,6 +19,10 @@ type GameSettings = {
   isController: boolean; // Flag to identify controller button
 };
 
+// Store actions by coordinates for later lookup
+type CoordinateKey = string;
+type ActionMap = Map<CoordinateKey, any>;
+
 @action({ UUID: "com.practical-engineer.deckdrop.game" })
 export class DeckDropGame extends SingletonAction<GameSettings> {
   // Game board (5 columns × 3 rows)
@@ -31,6 +36,14 @@ export class DeckDropGame extends SingletonAction<GameSettings> {
   
   private currentPlayer: number = PLAYER_ONE;
   private gameOver: boolean = false;
+  
+  // Map to store actions by coordinates
+  private actionLookup: ActionMap = new Map();
+  
+  // Helper to create coordinate key
+  private getCoordinateKey(col: number, row: number): CoordinateKey {
+    return `${col},${row}`;
+  }
 
   /**
    * Occurs when the action appears on Stream Deck
@@ -42,6 +55,15 @@ export class DeckDropGame extends SingletonAction<GameSettings> {
       coordinates: ev.action.coordinates,
       settings: ev.payload.settings
     });
+    
+    // Store action reference in our lookup map if it has coordinates
+    if (ev.action.coordinates) {
+      const col = ev.action.coordinates.column;
+      const row = ev.action.coordinates.row;
+      const key = this.getCoordinateKey(col, row);
+      this.actionLookup.set(key, ev.action);
+      streamDeck.logger.info(`Stored action at coordinates [${col}, ${row}]`);
+    }
      
     // Check if this is the controller button (top-left)
     if (ev.action.coordinates && 
@@ -85,6 +107,22 @@ export class DeckDropGame extends SingletonAction<GameSettings> {
   /**
    * Occurs when the action's key is pressed down
    */
+  /**
+   * Occurs when the action disappears from Stream Deck
+   */
+  override async onWillDisappear(ev: WillDisappearEvent<GameSettings>): Promise<void> {
+    // Remove action from our lookup map if it has coordinates
+    if (ev.action.coordinates) {
+      const col = ev.action.coordinates.column;
+      const row = ev.action.coordinates.row;
+      const key = this.getCoordinateKey(col, row);
+      this.actionLookup.delete(key);
+      streamDeck.logger.info(`Removed action at coordinates [${col}, ${row}]`);
+    }
+    
+    streamDeck.logger.info('Action disappeared');
+  }
+
   override async onKeyDown(ev: KeyDownEvent<GameSettings>): Promise<void> {
     // Log key press for debugging
     streamDeck.logger.info('Key pressed:', {
