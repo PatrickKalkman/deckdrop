@@ -14,7 +14,7 @@ const PLAYER_TWO = 2;
 
 type GameSettings = {
   gameState: number[][];
-  currentPlayer: number;
+  currentPlayer: number; 
   gameOver: boolean;
   isController: boolean; // Flag to identify controller button
 };
@@ -64,20 +64,8 @@ export class DeckDropGame extends SingletonAction<GameSettings> {
       this.actionLookup.set(key, ev.action);
       streamDeck.logger.info(`Stored action at coordinates [${col}, ${row}]`);
     }
-     
-    // Check if this is the controller button (top-left)
-    if (ev.action.coordinates && 
-        ev.action.coordinates.column === 0 && 
-        ev.action.coordinates.row === 0) {
-      
-      // Mark as controller in settings
-      await ev.action.setSettings({
-        ...ev.payload.settings,
-        isController: true
-      });
-      
-      streamDeck.logger.info('Controller button identified');
-    }
+
+    ev.action.setTitle('');
     
     // Load game state from settings if available
     if (ev.payload.settings?.gameState) {
@@ -93,13 +81,6 @@ export class DeckDropGame extends SingletonAction<GameSettings> {
       // Save initial game state
       await this.saveGameState(ev.action);
       streamDeck.logger.info('Initialized new game');
-    }
-
-    // Update this button
-    if (ev.action.coordinates) {
-      const col = ev.action.coordinates.column;
-      const row = ev.action.coordinates.row;
-      await this.updateButtonVisual(ev.action, col, row);
     }
     
     // Switch to the DeckDrop profile if we haven't already
@@ -147,14 +128,14 @@ export class DeckDropGame extends SingletonAction<GameSettings> {
     // Check if the pressed button is in the top row (row=0)
     if (ev.action.coordinates && ev.action.coordinates.row === 0) {
       const column = ev.action.coordinates.column;
-      
+       
       // Find the action at the same column but last row (row=2)
       const targetKey = this.getCoordinateKey(column, 2);
       const targetAction = this.actionLookup.get(targetKey);
       
       if (targetAction) {
         // Change the state of the target action to 1
-        await targetAction.setState(1);
+        targetAction.setImage('imgs/actions/deckdrop/red_token_in_slot.svg');
         streamDeck.logger.info(`Changed state of button at [${column}, 2] to 1`);
       } else {
         streamDeck.logger.info(`No action found at coordinates [${column}, 2]`);
@@ -164,8 +145,6 @@ export class DeckDropGame extends SingletonAction<GameSettings> {
       streamDeck.logger.info('Button not in top row, no action taken');
     }
     
-    // Set state of the pressed button
-    ev.action.setState(1);
   }
   
   /**
@@ -202,31 +181,6 @@ private async refreshDeck(action: any): Promise<void> {
   } catch (error) {
     streamDeck.logger.error('Failed to refresh deck:', error);
   }
-}
-
-/**
- * Update visuals for all buttons in the game grid
- */
-private async updateAllButtons(action: any): Promise<void> {
-  // Get the device from the current action
-  const device = action.device;
-  
-  // Update all buttons using our action lookup map
-  const updatedActions = [];
-  
-  for (let col = 0; col < 5; col++) {
-    for (let row = 0; row < 3; row++) {
-      const key = this.getCoordinateKey(col, row);
-      const actionInstance = this.actionLookup.get(key);
-      
-      if (actionInstance) {
-        await this.updateButtonVisual(actionInstance, col, row);
-        updatedActions.push(key);
-      }
-    }
-  }
-  
-  streamDeck.logger.info(`Found ${updatedActions.length} actions to update`);
 }
 
   /**
@@ -304,50 +258,6 @@ private async updateAllButtons(action: any): Promise<void> {
     return settings;
   }
 
-  /**
-   * Update the visual for a specific button
-   */
-  private async updateButtonVisual(action: any, column: number, row: number): Promise<void> {
-    // Ensure column and row are within bounds
-    if (column < 0 || column >= 5 || row < 0 || row >= 3) {
-      streamDeck.logger.info(`Invalid coordinates: [${column}, ${row}]`);
-      return;
-    }
-    
-    const cell = 1;//this.board[column][row];
-    
-    // Set image based on cell state
-    let imagePath;
-    if (cell === PLAYER_ONE) {
-      imagePath = 'imgs/actions/deckdrop/red_token_in_slot.svg';
-    } else if (cell === PLAYER_TWO) {
-      imagePath = 'imgs/actions/deckdrop/yellow_token_in_slot.svg';
-    } else {
-      imagePath = 'imgs/actions/deckdrop/empty_slot.svg';
-    }
-    
-    // Add visual indicator for current player on empty slots
-    if (cell === EMPTY && !this.gameOver) {
-      // If this column is not full, highlight the topmost empty slot
-      let isTopEmptyInColumn = false;
-      
-      // Find the topmost empty slot in this column
-      for (let r = 0; r < 3; r++) {
-        if (this.board[column][r] === EMPTY) {
-          isTopEmptyInColumn = (r === row);
-          break;
-        }
-      }
-    }
-    
-    try {
-      if (action.setImage) {
-        return action.setImage(imagePath);
-      }
-    } catch (error) {
-      streamDeck.logger.error(`Error setting image: ${error}`);
-    }
-  }
 
   /**
    * Check if the last move resulted in a win
