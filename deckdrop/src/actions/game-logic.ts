@@ -4,17 +4,14 @@ import streamDeck from "@elgato/streamdeck";
 
 export class GameLogic {
   // Game board (3 rows × 5 columns)
-  private board: number[][] = [
-    [EMPTY, EMPTY, EMPTY, EMPTY, EMPTY], // Row 0
-    [EMPTY, EMPTY, EMPTY, EMPTY, EMPTY], // Row 1
-    [EMPTY, EMPTY, EMPTY, EMPTY, EMPTY], // Row 2
-  ];
-  
-  private currentPlayer: number = PLAYER_ONE;
-  private gameOver: boolean = false;
+  private board: number[][];
+  private currentPlayer: number;
+  private gameOver: boolean;
   private winChecker: WinChecker = new WinChecker();
   
-  constructor() {}
+  constructor() {
+    this.resetGame();
+  }
   
   public getBoard(): number[][] {
     return this.board;
