@@ -91,41 +91,25 @@ class ConnectThreeEnv:
         # Check horizontal
         for r in range(3):
             for c in range(3):  # Up to 3 to check 3 in a row
-                if (
-                    board[r][c] == player
-                    and board[r][c + 1] == player
-                    and board[r][c + 2] == player
-                ):
+                if board[r][c] == player and board[r][c + 1] == player and board[r][c + 2] == player:
                     return True
 
         # Check vertical
         for r in range(1):  # Only bottom row can start a vertical win (3 rows total)
             for c in range(5):
-                if (
-                    board[r][c] == player
-                    and board[r + 1][c] == player
-                    and board[r + 2][c] == player
-                ):
+                if board[r][c] == player and board[r + 1][c] == player and board[r + 2][c] == player:
                     return True
 
         # Check diagonal (/)
         for r in range(2, 3):  # Start from bottom rows
             for c in range(3):  # Up to 3 to check 3 in a row
-                if (
-                    board[r][c] == player
-                    and board[r - 1][c + 1] == player
-                    and board[r - 2][c + 2] == player
-                ):
+                if board[r][c] == player and board[r - 1][c + 1] == player and board[r - 2][c + 2] == player:
                     return True
 
         # Check diagonal (\)
         for r in range(1):  # Start from top rows
             for c in range(3):  # Up to 3 to check 3 in a row
-                if (
-                    board[r][c] == player
-                    and board[r + 1][c + 1] == player
-                    and board[r + 2][c + 2] == player
-                ):
+                if board[r][c] == player and board[r + 1][c + 1] == player and board[r + 2][c + 2] == player:
                     return True
 
         return False
