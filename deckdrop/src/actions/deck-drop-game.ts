@@ -146,7 +146,8 @@ export class DeckDropGame extends SingletonAction<GameSettings> {
     if (this.checkWinner(row, column)) {
       streamDeck.logger.info(`Player ${this.currentPlayer} wins!`);
       this.gameOver = true;
-      this.resetGame();
+      // Game will be reset after the winner animation completes
+      setTimeout(() => this.resetGame(), 5000); // Wait for animation to complete (5 seconds)
       return true;
     }
     
@@ -181,13 +182,22 @@ export class DeckDropGame extends SingletonAction<GameSettings> {
    */
   private checkWinner(row: number, col: number): boolean {
     const player = this.board[row][col];
+    const winningPositions: [number, number][] = [];
     
     // Check horizontal
     let count = 0;
+    let startCol = 0;
     for (let c = 0; c < 5; c++) {
       if (this.board[row][c] === player) {
+        if (count === 0) startCol = c;
         count++;
-        if (count === 3) return true;
+        if (count === 3) {
+          for (let i = 0; i < 3; i++) {
+            winningPositions.push([row, startCol + i]);
+          }
+          this.showWinner(winningPositions, player);
+          return true;
+        }
       } else {
         count = 0;
       }
@@ -195,10 +205,18 @@ export class DeckDropGame extends SingletonAction<GameSettings> {
     
     // Check vertical
     count = 0;
+    let startRow = 0;
     for (let r = 0; r < 3; r++) {
       if (this.board[r][col] === player) {
+        if (count === 0) startRow = r;
         count++;
-        if (count === 3) return true;
+        if (count === 3) {
+          for (let i = 0; i < 3; i++) {
+            winningPositions.push([startRow + i, col]);
+          }
+          this.showWinner(winningPositions, player);
+          return true;
+        }
       } else {
         count = 0;
       }
@@ -213,6 +231,10 @@ export class DeckDropGame extends SingletonAction<GameSettings> {
             this.board[r+1][c+1] === player &&
             this.board[r+2][c+2] === player
           ) {
+            winningPositions.push([r, c]);
+            winningPositions.push([r+1, c+1]);
+            winningPositions.push([r+2, c+2]);
+            this.showWinner(winningPositions, player);
             return true;
           }
         }
@@ -228,6 +250,10 @@ export class DeckDropGame extends SingletonAction<GameSettings> {
             this.board[r-1][c+1] === player &&
             this.board[r-2][c+2] === player
           ) {
+            winningPositions.push([r, c]);
+            winningPositions.push([r-1, c+1]);
+            winningPositions.push([r-2, c+2]);
+            this.showWinner(winningPositions, player);
             return true;
           }
         }
@@ -249,6 +275,53 @@ export class DeckDropGame extends SingletonAction<GameSettings> {
       }
     }
     return true;
+  }
+
+  /**
+   * Make the winning tokens blink
+   * @param positions Array of [row, col] positions of winning tokens
+   * @param player The player who won (PLAYER_ONE or PLAYER_TWO)
+   */
+  private async showWinner(positions: [number, number][], player: number): Promise<void> {
+    const emptyImage = "imgs/actions/deckdrop/empty-slot.svg";
+    const playerImage = player === PLAYER_ONE 
+      ? "imgs/actions/deckdrop/yellow-token-in-slot.svg" 
+      : "imgs/actions/deckdrop/red-token-in-slot.svg";
+    
+    // Blink 5 times
+    for (let i = 0; i < 5; i++) {
+      // Set to empty
+      for (const [row, col] of positions) {
+        const key = this.getCoordinateKey(row, col);
+        const action = this.actionLookup.get(key);
+        if (action) {
+          try {
+            await action.setImage(emptyImage);
+          } catch (error) {
+            streamDeck.logger.error(`Failed to set empty image for [${row}, ${col}]:`, error);
+          }
+        }
+      }
+      
+      // Wait half a second
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Set back to player token
+      for (const [row, col] of positions) {
+        const key = this.getCoordinateKey(row, col);
+        const action = this.actionLookup.get(key);
+        if (action) {
+          try {
+            await action.setImage(playerImage);
+          } catch (error) {
+            streamDeck.logger.error(`Failed to set player image for [${row}, ${col}]:`, error);
+          }
+        }
+      }
+      
+      // Wait half a second before next blink
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
   }
 
   /**
