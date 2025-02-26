@@ -5,7 +5,7 @@ import streamDeck, {
   WillAppearEvent,
   WillDisappearEvent
 } from "@elgato/streamdeck";
-import { GameRenderer, EMPTY, PLAYER_ONE, PLAYER_TWO } from "./game-renderer";
+import { GameRenderer } from "./game-renderer";
 import { GameLogic } from "./game-logic";
 
 type GameSettings = {
@@ -14,7 +14,6 @@ type GameSettings = {
   isController: boolean; // Flag to identify controller button
 };
 
-// Store actions by coordinates for later lookup
 type CoordinateKey = string;
 type ActionMap = Map<CoordinateKey, any>;
 
@@ -31,8 +30,7 @@ export class DeckDropGame extends SingletonAction<GameSettings> {
     this.gameLogic = new GameLogic();
     this.renderer = new GameRenderer(this.actionLookup);
   }
-  
-  // Helper to create coordinate key
+
   private getCoordinateKey(row: number, col: number): CoordinateKey {
     return `${row},${col}`;
   }
@@ -56,10 +54,6 @@ export class DeckDropGame extends SingletonAction<GameSettings> {
       this.actionLookup.set(key, ev.action);
       streamDeck.logger.info(`Stored action at coordinates [${row}, ${col}]`);
     }
-    
-    // TODO: Load game state from settings if available
-    // Currently not implemented as we need to serialize/deserialize the game state
-
     
     // Switch to the DeckDrop profile if we haven't already
     if (!this.hasProfileSwitched) {
@@ -100,11 +94,7 @@ export class DeckDropGame extends SingletonAction<GameSettings> {
     // Check if the pressed button is in the top row (row=0)
     if (ev.action.coordinates && ev.action.coordinates.row === 0) {
       const column = ev.action.coordinates.column;
-      
-      // Make the move and handle game over condition
       const moveResult = this.gameLogic.makeMove(column, this.renderer.showWinner.bind(this.renderer));
-      
-      // Render the updated board
       this.renderer.renderBoard(this.gameLogic.getBoard());
       
       // If the game is over, schedule a reset
@@ -115,7 +105,6 @@ export class DeckDropGame extends SingletonAction<GameSettings> {
         }, 5000); // Wait for animation to complete (5 seconds)
       }
     } else {
-      // If it's not a button in the top row, do nothing
       streamDeck.logger.info('Button not in top row, no action taken');
     }
   }
