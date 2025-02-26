@@ -101,9 +101,22 @@ export class DeckDropGame extends SingletonAction<GameSettings> {
       const row = ev.action.coordinates.row;
       await this.updateButtonVisual(ev.action, col, row);
     }
+    
+    // Switch to the DeckDrop profile if we haven't already
+    if (!this.hasProfileSwitched) {
+      try {
+        await streamDeck.profiles.switchToProfile(ev.action.device.id, "DeckDrop");
+        this.hasProfileSwitched = true;
+        streamDeck.logger.info('Switched to DeckDrop profile');
+      } catch (error) {
+        streamDeck.logger.error(`Failed to switch profile: ${error}`);
+      }
+    }
   }
 
-  hasAlreadySwitched: boolean = false;
+  // Track if we've already switched to the DeckDrop profile
+  private hasProfileSwitched: boolean = false;
+  
   /**
    * Occurs when the action's key is pressed down
    */
