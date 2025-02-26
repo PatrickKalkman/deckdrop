@@ -9,7 +9,16 @@
 			"Name": "DeckDrop",
 			"States": [
 				{
-					"Image": "imgs/actions/deckdrop/empty-slot"
+					"Image": "imgs/actions/deckdrop/empty-slot",
+					"Title": "Empty"
+				},
+				{
+					"Image": "imgs/actions/deckdrop/red-token-in-slot",
+					"Title": "Red"
+				},
+				{
+					"Image": "imgs/actions/deckdrop/yellow-token-in-slot",
+					"Title": "Yellow"
 				}
 			]
 		}
@@ -23,6 +32,14 @@
 	"Software": {
 		"MinimumVersion": "6.4"
 	},
+	"Profiles": [
+		{
+			"Name": "DeckDrop",
+			"DeviceType": 0,
+			"Readonly": false,
+			"DontAutoSwitchWhenInstalled": false
+		}
+	],
 	"OS": [
 		{
 			"Platform": "mac",
