@@ -6,16 +6,7 @@ import streamDeck, {
   WillDisappearEvent
 } from "@elgato/streamdeck";
 import { WinChecker } from "./win-checker";
-
-// Board states
-const EMPTY = 0; 
-const PLAYER_ONE = 1;
-const PLAYER_TWO = 2;
-
-// Image paths
-const EMPTY_SLOT_IMAGE = "imgs/actions/deckdrop/empty-slot.svg";
-const YELLOW_TOKEN_IMAGE = "imgs/actions/deckdrop/yellow-token-in-slot.svg";
-const RED_TOKEN_IMAGE = "imgs/actions/deckdrop/red-token-in-slot.svg";
+import { GameRenderer, EMPTY, PLAYER_ONE, PLAYER_TWO } from "./game-renderer";
 
 type GameSettings = {
   currentPlayer: number; 
@@ -39,9 +30,15 @@ export class DeckDropGame extends SingletonAction<GameSettings> {
   private currentPlayer: number = PLAYER_ONE;
   private gameOver: boolean = false;
   private winChecker: WinChecker = new WinChecker();
+  private renderer: GameRenderer;
 
   // Map to store actions by coordinates
   private actionLookup: ActionMap = new Map();
+
+  constructor() {
+    super();
+    this.renderer = new GameRenderer(this.actionLookup);
+  }
   
   // Helper to create coordinate key
   private getCoordinateKey(row: number, col: number): CoordinateKey {
@@ -113,7 +110,7 @@ export class DeckDropGame extends SingletonAction<GameSettings> {
     if (ev.action.coordinates && ev.action.coordinates.row === 0) {
       const column = ev.action.coordinates.column;
       this.makeMove(column);
-      this.renderBoard();
+      this.renderer.renderBoard(this.board);
     } else {
       // If it's not a button in the top row, do nothing
       streamDeck.logger.info('Button not in top row, no action taken');
@@ -144,7 +141,7 @@ export class DeckDropGame extends SingletonAction<GameSettings> {
     streamDeck.logger.info('Current board:', JSON.stringify(this.board));
     
     // Check for winner
-    if (this.winChecker.checkWinner(this.board, row, column, this.showWinner.bind(this))) {
+    if (this.winChecker.checkWinner(this.board, row, column, this.renderer.showWinner.bind(this.renderer))) {
       streamDeck.logger.info(`Player ${this.currentPlayer} wins!`);
       this.gameOver = true;
       // Game will be reset after the winner animation completes
@@ -197,85 +194,4 @@ export class DeckDropGame extends SingletonAction<GameSettings> {
     return true;
   }
 
-  /**
-   * Sets an image on a button at the specified coordinates
-   * @param row Row coordinate
-   * @param col Column coordinate
-   * @param imagePath Path to the image
-   * @returns Promise that resolves when the image is set
-   */
-  private async setButtonImage(row: number, col: number, imagePath: string): Promise<boolean> {
-    const key = this.getCoordinateKey(row, col);
-    const action = this.actionLookup.get(key);
-    
-    if (!action) {
-      streamDeck.logger.info(`No action found for coordinates [${row}, ${col}]`);
-      return false;
-    }
-    
-    try {
-      await action.setImage(imagePath);
-      streamDeck.logger.info(`Set image for [${row}, ${col}] to ${imagePath}`);
-      return true;
-    } catch (error) {
-      streamDeck.logger.error(`Failed to set image for [${row}, ${col}]:`, error);
-      return false;
-    }
-  }
-
-  /**
-   * Make the winning tokens blink
-   * @param positions Array of [row, col] positions of winning tokens
-   * @param player The player who won (PLAYER_ONE or PLAYER_TWO)
-   */
-  private async showWinner(positions: [number, number][], player: number): Promise<void> {
-    const playerImage = player === PLAYER_ONE ? YELLOW_TOKEN_IMAGE : RED_TOKEN_IMAGE;
-    
-    // Blink 5 times
-    for (let i = 0; i < 5; i++) {
-      // Set to empty
-      for (const [row, col] of positions) {
-        await this.setButtonImage(row, col, EMPTY_SLOT_IMAGE);
-      }
-      
-      // Wait half a second
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Set back to player token
-      for (const [row, col] of positions) {
-        await this.setButtonImage(row, col, playerImage);
-      }
-      
-      // Wait half a second before next blink
-      await new Promise(resolve => setTimeout(resolve, 500));
-    }
-  }
-
-  /**
-   * Render the current board state on the Stream Deck
-   */
-  private async renderBoard(): Promise<void> {
-    // Iterate through each cell in the board
-    for (let row = 0; row < 3; row++) {
-      for (let col = 0; col < 5; col++) {
-        // Determine which image to show based on cell state
-        let imagePath = "";
-        switch (this.board[row][col]) {
-          case EMPTY:
-            imagePath = EMPTY_SLOT_IMAGE;
-            break;
-          case PLAYER_ONE:
-            imagePath = YELLOW_TOKEN_IMAGE;
-            break;
-          case PLAYER_TWO:
-            imagePath = RED_TOKEN_IMAGE;
-            break;
-        }
-        
-        if (imagePath) {
-          await this.setButtonImage(row, col, imagePath);
-        }
-      }
-    }
-  }
 }
