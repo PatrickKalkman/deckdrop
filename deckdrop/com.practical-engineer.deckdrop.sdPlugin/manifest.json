@@ -9,16 +9,7 @@
 			"Name": "DeckDrop",
 			"States": [
 				{
-					"Image": "imgs/actions/deckdrop/empty-slot",
-					"Title": "Empty"
-				},
-				{
-					"Image": "imgs/actions/deckdrop/red-token-in-slot",
-					"Title": "Red"
-				},
-				{
-					"Image": "imgs/actions/deckdrop/yellow-token-in-slot",
-					"Title": "Yellow"
+					"Image": "imgs/actions/deckdrop/empty-slot"
 				}
 			]
 		}

@@ -3,7 +3,6 @@ import streamDeck, {
   KeyDownEvent, 
   SingletonAction, 
   WillAppearEvent,
-  DeviceInfo,
   WillDisappearEvent
 } from "@elgato/streamdeck";
 
@@ -27,11 +26,9 @@ type ActionMap = Map<CoordinateKey, any>;
 export class DeckDropGame extends SingletonAction<GameSettings> {
   // Game board (5 columns × 3 rows)
   private board: number[][] = [
-    [EMPTY, EMPTY, EMPTY], // Column 0
-    [EMPTY, EMPTY, EMPTY], // Column 1
-    [EMPTY, EMPTY, EMPTY], // Column 2
-    [EMPTY, EMPTY, EMPTY], // Column 3
-    [EMPTY, EMPTY, EMPTY], // Column 4
+    [EMPTY, EMPTY, EMPTY, EMPTY, EMPTY], // Row 0
+    [EMPTY, EMPTY, EMPTY, EMPTY, EMPTY], // Row 1
+    [EMPTY, EMPTY, EMPTY, EMPTY, EMPTY], // Row 2
   ];
   
   private currentPlayer: number = PLAYER_ONE;
@@ -64,8 +61,6 @@ export class DeckDropGame extends SingletonAction<GameSettings> {
       this.actionLookup.set(key, ev.action);
       streamDeck.logger.info(`Stored action at coordinates [${col}, ${row}]`);
     }
-
-    ev.action.setTitle('');
     
     // Load game state from settings if available
     if (ev.payload.settings?.gameState) {
@@ -135,8 +130,8 @@ export class DeckDropGame extends SingletonAction<GameSettings> {
       
       if (targetAction) {
         // Change the state of the target action to 1
-        targetAction.setImage('imgs/actions/deckdrop/red_token_in_slot.svg');
-        streamDeck.logger.info(`Changed state of button at [${column}, 2] to 1`);
+        targetAction.setImage('imgs/actions/deckdrop/red-token-in-slot.svg');
+        streamDeck.logger.info(`Changed button at [${column}, 2] to 1`);
       } else {
         streamDeck.logger.info(`No action found at coordinates [${column}, 2]`);
       }
@@ -144,7 +139,6 @@ export class DeckDropGame extends SingletonAction<GameSettings> {
       // If it's not a button in the top row, do nothing
       streamDeck.logger.info('Button not in top row, no action taken');
     }
-    
   }
   
   /**
