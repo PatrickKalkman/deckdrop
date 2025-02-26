@@ -130,7 +130,9 @@ export class DeckDropGame extends SingletonAction<GameSettings> {
       
       if (targetAction) {
         this.makeMove(column);
-
+        
+        // Render the updated board state
+        this.renderBoard();
         
       } else {
         streamDeck.logger.info(`No action found at coordinates [${column}, 2]`);
