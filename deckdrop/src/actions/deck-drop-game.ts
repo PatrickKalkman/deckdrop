@@ -111,13 +111,13 @@ export class DeckDropGame extends SingletonAction<GameSettings> {
    * Occurs when the action disappears from Stream Deck
    */
   override async onWillDisappear(ev: WillDisappearEvent<GameSettings>): Promise<void> {
-    // Remove action from our lookup map if it has coordinates
-    if (ev.action.coordinates) {
-      const col = ev.action.coordinates.column;
-      const row = ev.action.coordinates.row;
-      const key = this.getCoordinateKey(col, row);
-      this.actionLookup.delete(key);
-      streamDeck.logger.info(`Removed action at coordinates [${col}, ${row}]`);
+    // Find and remove the action from our lookup map
+    for (const [key, storedAction] of this.actionLookup.entries()) {
+      if (storedAction.id === ev.action.id) {
+        this.actionLookup.delete(key);
+        streamDeck.logger.info(`Removed action with ID ${ev.action.id} from lookup map`);
+        break;
+      }
     }
     
     streamDeck.logger.info('Action disappeared');
