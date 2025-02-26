@@ -206,8 +206,8 @@ export class DeckDropGame extends SingletonAction<GameSettings> {
     }
     
     // Check diagonal (top-left to bottom-right)
-    for (let c = 0; c < 3; c++) {
-      for (let r = 0; r < 1; r++) {
+    for (let r = 0; r < 3; r++) {
+      for (let c = 0; c < 1; c++) {
         if (
           this.board[r][c] === player &&
           this.board[r+1][c+1] === player &&
