@@ -81,12 +81,6 @@ export class DeckDropGame extends SingletonAction<GameSettings> {
   // Track if we've already switched to the DeckDrop profile
   private hasProfileSwitched: boolean = false;
   
-  /**
-   * Occurs when the action's key is pressed down
-   */
-  /**
-   * Occurs when the action disappears from Stream Deck
-   */
   override async onWillDisappear(ev: WillDisappearEvent<GameSettings>): Promise<void> {
     // Find and remove the action from our lookup map
     for (const [key, storedAction] of this.actionLookup.entries()) {
@@ -101,7 +95,7 @@ export class DeckDropGame extends SingletonAction<GameSettings> {
   }
 
   override async onKeyDown(ev: KeyDownEvent<GameSettings>): Promise<void> {
-    // Log key press for debugging
+
     streamDeck.logger.info('Key pressed:', {
       actionId: ev.action.id,
       coordinates: ev.action.coordinates,
@@ -147,7 +141,11 @@ export class DeckDropGame extends SingletonAction<GameSettings> {
       streamDeck.logger.info(`Player ${this.currentPlayer} wins!`);
       this.gameOver = true;
       // Game will be reset after the winner animation completes
-      setTimeout(() => this.resetGame(), 5000); // Wait for animation to complete (5 seconds)
+      setTimeout(() => {
+        this.resetGame();
+        this.renderBoard();
+        }, 5000); // Wait for animation to complete (5 seconds)
+
       return true;
     }
     
