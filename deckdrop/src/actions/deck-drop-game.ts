@@ -180,11 +180,24 @@ export class DeckDropGame extends SingletonAction<GameSettings> {
    */
   private checkWinner(row: number, col: number): boolean {
     const player = this.board[row][col];
-    const winningPositions: [number, number][] = [];
     
-    // Check horizontal
+    // Check each win condition
+    return (
+      this.checkHorizontalWin(row, player) ||
+      this.checkVerticalWin(col, player) ||
+      this.checkDiagonalDownWin(player) ||
+      this.checkDiagonalUpWin(player)
+    );
+  }
+
+  /**
+   * Check for horizontal win (row-based)
+   */
+  private checkHorizontalWin(row: number, player: number): boolean {
+    const winningPositions: [number, number][] = [];
     let count = 0;
     let startCol = 0;
+    
     for (let c = 0; c < 5; c++) {
       if (this.board[row][c] === player) {
         if (count === 0) startCol = c;
@@ -201,9 +214,17 @@ export class DeckDropGame extends SingletonAction<GameSettings> {
       }
     }
     
-    // Check vertical
-    count = 0;
+    return false;
+  }
+
+  /**
+   * Check for vertical win (column-based)
+   */
+  private checkVerticalWin(col: number, player: number): boolean {
+    const winningPositions: [number, number][] = [];
+    let count = 0;
     let startRow = 0;
+    
     for (let r = 0; r < 3; r++) {
       if (this.board[r][col] === player) {
         if (count === 0) startRow = r;
@@ -220,10 +241,21 @@ export class DeckDropGame extends SingletonAction<GameSettings> {
       }
     }
     
-    // Check diagonal (top-left to bottom-right)
-    for (let r = 0; r <= 0; r++) { // Can only start from row 0
-      for (let c = 0; c <= 2; c++) { // Can only start from columns 0, 1, or 2
-        if (r+2 < 3 && c+2 < 5) { // Make sure we don't go out of bounds
+    return false;
+  }
+
+  /**
+   * Check for diagonal win (top-left to bottom-right)
+   */
+  private checkDiagonalDownWin(player: number): boolean {
+    const winningPositions: [number, number][] = [];
+    
+    // Can only start from row 0
+    for (let r = 0; r <= 0; r++) {
+      // Can only start from columns 0, 1, or 2
+      for (let c = 0; c <= 2; c++) {
+        // Make sure we don't go out of bounds
+        if (r+2 < 3 && c+2 < 5) {
           if (
             this.board[r][c] === player &&
             this.board[r+1][c+1] === player &&
@@ -239,10 +271,21 @@ export class DeckDropGame extends SingletonAction<GameSettings> {
       }
     }
     
-    // Check diagonal (bottom-left to top-right)
-    for (let r = 2; r >= 2; r--) { // Can only start from row 2
-      for (let c = 0; c <= 2; c++) { // Can only start from columns 0, 1, or 2
-        if (r-2 >= 0 && c+2 < 5) { // Make sure we don't go out of bounds
+    return false;
+  }
+
+  /**
+   * Check for diagonal win (bottom-left to top-right)
+   */
+  private checkDiagonalUpWin(player: number): boolean {
+    const winningPositions: [number, number][] = [];
+    
+    // Can only start from row 2
+    for (let r = 2; r >= 2; r--) {
+      // Can only start from columns 0, 1, or 2
+      for (let c = 0; c <= 2; c++) {
+        // Make sure we don't go out of bounds
+        if (r-2 >= 0 && c+2 < 5) {
           if (
             this.board[r][c] === player &&
             this.board[r-1][c+1] === player &&
