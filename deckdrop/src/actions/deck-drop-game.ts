@@ -131,9 +131,28 @@ export class DeckDropGame extends SingletonAction<GameSettings> {
       settings: ev.payload.settings
     });
 
-  
+    // Check if the pressed button is in the top row (row=0)
+    if (ev.action.coordinates && ev.action.coordinates.row === 0) {
+      const column = ev.action.coordinates.column;
+      
+      // Find the action at the same column but last row (row=2)
+      const targetKey = this.getCoordinateKey(column, 2);
+      const targetAction = this.actionLookup.get(targetKey);
+      
+      if (targetAction) {
+        // Change the state of the target action to 1
+        await targetAction.setState(1);
+        streamDeck.logger.info(`Changed state of button at [${column}, 2] to 1`);
+      } else {
+        streamDeck.logger.info(`No action found at coordinates [${column}, 2]`);
+      }
+    } else {
+      // If it's not a button in the top row, do nothing
+      streamDeck.logger.info('Button not in top row, no action taken');
+    }
+    
+    // Set state of the pressed button
     ev.action.setState(1);
-    streamDeck.logger.info(ev.action.coordinates);
   }
   
   /**
