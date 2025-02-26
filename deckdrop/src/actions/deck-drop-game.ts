@@ -306,4 +306,46 @@ private async refreshDeck(action: any): Promise<void> {
     }
     return true;
   }
+
+  /**
+   * Render the current board state on the Stream Deck
+   */
+  private async renderBoard(): Promise<void> {
+    // Iterate through each cell in the board
+    for (let col = 0; col < 5; col++) {
+      for (let row = 0; row < 3; row++) {
+        // Get the action for this coordinate
+        const key = this.getCoordinateKey(col, row);
+        const action = this.actionLookup.get(key);
+        
+        if (action) {
+          // Determine which image to show based on cell state
+          let imagePath = "";
+          switch (this.board[row][col]) {
+            case EMPTY:
+              imagePath = "imgs/actions/deckdrop/empty-slot.svg";
+              break;
+            case PLAYER_ONE:
+              imagePath = "imgs/actions/deckdrop/yellow-token-in-slot.svg";
+              break;
+            case PLAYER_TWO:
+              imagePath = "imgs/actions/deckdrop/red-token-in-slot.svg";
+              break;
+          }
+          
+          // Set the image for this button
+          if (imagePath) {
+            try {
+              await action.setImage(imagePath);
+              streamDeck.logger.info(`Set image for [${row}, ${col}] to ${imagePath}`);
+            } catch (error) {
+              streamDeck.logger.error(`Failed to set image for [${row}, ${col}]:`, error);
+            }
+          }
+        } else {
+          streamDeck.logger.info(`No action found for coordinates [${row}, ${col}]`);
+        }
+      }
+    }
+  }
 }
