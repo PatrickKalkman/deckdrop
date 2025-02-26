@@ -1,7 +1,13 @@
-import streamDeck, { action, KeyDownEvent, SingletonAction, WillAppearEvent, WillDisappearEvent } from "@elgato/streamdeck";
+import streamDeck, { 
+  action, 
+  KeyDownEvent, 
+  SingletonAction, 
+  WillAppearEvent,
+  DeviceInfo 
+} from "@elgato/streamdeck";
 
 // Game states
-const EMPTY = 0;
+const EMPTY = 0; 
 const PLAYER_ONE = 1;
 const PLAYER_TWO = 2;
 
@@ -9,6 +15,7 @@ type GameSettings = {
   gameState: number[][];
   currentPlayer: number;
   gameOver: boolean;
+  isController: boolean; // Flag to identify controller button
 };
 
 @action({ UUID: "com.practical-engineer.deckdrop.game" })
@@ -25,37 +32,54 @@ export class DeckDropGame extends SingletonAction<GameSettings> {
   private currentPlayer: number = PLAYER_ONE;
   private gameOver: boolean = false;
 
-/**
- * Occurs when the action appears on Stream Deck
- */
-override async onWillAppear(ev: WillAppearEvent<GameSettings>): Promise<void> {
-  // Log event info for debugging
-  streamDeck.logger.info('Action appeared:', {
-    actionId: ev.action.id,
-    deviceId: ev.action.device.id,
-    coordinates: ev.action.coordinates,
-    settings: ev.payload.settings
-  });
-  
-  // Load game state from settings if available
-  if (ev.payload.settings?.gameState) {
-    this.board = ev.payload.settings.gameState;
-    this.currentPlayer = ev.payload.settings.currentPlayer;
-    this.gameOver = ev.payload.settings.gameOver;
+  /**
+   * Occurs when the action appears on Stream Deck
+   */
+  override async onWillAppear(ev: WillAppearEvent<GameSettings>): Promise<void> {
+    // Log event info for debugging
+    streamDeck.logger.info('Action appeared:', {
+      actionId: ev.action.id,
+      coordinates: ev.action.coordinates,
+      settings: ev.payload.settings
+    });
     
-    streamDeck.logger.info('Loaded saved game state');
-  } else {
-    // Initialize new game
-    this.resetGame();
+    // Check if this is the controller button (top-left)
+    if (ev.action.coordinates && 
+        ev.action.coordinates.column === 0 && 
+        ev.action.coordinates.row === 0) {
+      
+      // Mark as controller in settings
+      await ev.action.setSettings({
+        ...ev.payload.settings,
+        isController: true
+      });
+      
+      streamDeck.logger.info('Controller button identified');
+    }
     
-    // Save initial game state
-    await this.saveGameState(ev.action);
-    streamDeck.logger.info('Initialized new game');
-  }
+    // Load game state from settings if available
+    if (ev.payload.settings?.gameState) {
+      this.board = ev.payload.settings.gameState;
+      this.currentPlayer = ev.payload.settings.currentPlayer;
+      this.gameOver = ev.payload.settings.gameOver;
+      
+      streamDeck.logger.info('Loaded saved game state');
+    } else {
+      // Initialize new game
+      this.resetGame();
+      
+      // Save initial game state
+      await this.saveGameState(ev.action);
+      streamDeck.logger.info('Initialized new game');
+    }
 
-  // Update all buttons to ensure consistent state
-  await this.updateAllButtons(ev.action);
-}
+    // Update this button
+    if (ev.action.coordinates) {
+      const col = ev.action.coordinates.column;
+      const row = ev.action.coordinates.row;
+      await this.updateButtonVisual(ev.action, col, row);
+    }
+  }
 
   /**
    * Occurs when the action's key is pressed down
@@ -64,16 +88,43 @@ override async onWillAppear(ev: WillAppearEvent<GameSettings>): Promise<void> {
     // Log key press for debugging
     streamDeck.logger.info('Key pressed:', {
       actionId: ev.action.id,
-      deviceId: ev.action.device.id,
       coordinates: ev.action.coordinates,
       settings: ev.payload.settings
     });
     
+  // Check if this is the controller button
+  const isController = ev.payload.settings?.isController || false;
+
+  if (isController) {
+    // Controller button logic - update the button below
+    streamDeck.logger.info('Controller button pressed');
+    
+    if (ev.action.coordinates) {
+      const targetCol = ev.action.coordinates.column;
+      const targetRow = ev.action.coordinates.row + 1; // Button below
+      
+      // Only proceed if target row is valid
+      if (targetRow < 3) {
+        // Toggle the state of the target cell
+        this.toggleCellState(targetCol, targetRow);
+        
+        // Save game state and refresh
+        await this.saveGameState(ev.action);
+        await this.refreshDeck(ev.action);
+      } 
+    }
+    return;
+  }
+    
+    // Regular game button logic
     if (this.gameOver) {
       // Reset game if game is over
       this.resetGame();
       await this.saveGameState(ev.action);
-      return this.updateAllButtons(ev.action);
+      
+      // Force all buttons to refresh by switching profiles
+      await this.refreshDeck(ev.action);
+      return;
     }
 
     // Get position from coordinates
@@ -87,19 +138,47 @@ override async onWillAppear(ev: WillAppearEvent<GameSettings>): Promise<void> {
         // Save updated game state
         await this.saveGameState(ev.action);
         
-        // Update all buttons to reflect new state
-        await this.updateAllButtons(ev.action);
+        // Force all buttons to refresh by switching profiles
+        await this.refreshDeck(ev.action);
       }
     }
   }
-
+  
   /**
-   * Occurs when the action is removed from Stream Deck
+   * Toggle cell state between empty and Player One
    */
-  override onWillDisappear(ev: WillDisappearEvent<GameSettings>): void {
-    streamDeck.logger.info('Action disappeared');
-    // Any cleanup needed when the action is removed
+  private toggleCellState(col: number, row: number): void {
+    // Ensure column and row are within bounds
+    if (col < 0 || col >= 5 || row < 0 || row >= 3) {
+      streamDeck.logger.info(`Invalid coordinates: [${col}, ${row}]`);
+      return;
+    }
+    
+    // Toggle between empty and Player One
+    this.board[col][row] = this.board[col][row] === EMPTY ? PLAYER_ONE : EMPTY;
+    
+    streamDeck.logger.info(`Toggled cell at [${col}, ${row}] to ${this.board[col][row]}`);
+    streamDeck.logger.info('Current board:', JSON.stringify(this.board));
   }
+
+/**
+ * Force all buttons to refresh by switching profiles
+ */
+private async refreshDeck(action: any): Promise<void> {
+  try {
+    const deviceId = action.device.id;
+    
+    // Save game state before refreshing
+    await this.saveGameState(action);
+    
+    // Switch to the same profile to force a refresh of all buttons
+    await streamDeck.profiles.switchToProfile(deviceId);
+    
+    streamDeck.logger.info('Refreshed deck');
+  } catch (error) {
+    streamDeck.logger.error('Failed to refresh deck:', error);
+  }
+}
 
   /**
    * Make a move in the specified column
@@ -162,93 +241,71 @@ override async onWillAppear(ev: WillAppearEvent<GameSettings>): Promise<void> {
   /**
    * Save game state to action settings
    */
-  private async saveGameState(action: any): Promise<void> {
-    await action.setSettings({
+  private async saveGameState(action: any): Promise<GameSettings> {
+    const currentSettings = await action.getSettings() || {};
+    
+    const settings = {
+      ...currentSettings,
       gameState: this.board,
       currentPlayer: this.currentPlayer,
       gameOver: this.gameOver
-    });
+    };
+    
+    await action.setSettings(settings);
+    return settings;
   }
 
-/**
- * Update visuals for all buttons in the game grid
- */
-private async updateAllButtons(action: any): Promise<void> {
-  // Get the device from the current action
-  const device = action.device;
-  
-  // Get all instances of this action on the device
-  const actions = await device.getActions();
-  
-  streamDeck.logger.info(`Found ${actions.length} actions to update`);
-  
-  // Update each action instance
-  for (const actionInstance of actions) {
-    // Skip actions without coordinates (shouldn't happen for a grid)
-    if (!actionInstance.coordinates) continue;
-    
-    const col = actionInstance.coordinates.column;
-    const row = actionInstance.coordinates.row;
-    
-    // Make sure this button is within our game board dimensions
-    if (col >= 0 && col < 5 && row >= 0 && row < 3) {
-      // Update this button based on the game state
-      await this.updateButtonVisual(actionInstance, col, row);
+  /**
+   * Update the visual for a specific button
+   */
+  private async updateButtonVisual(action: any, column: number, row: number): Promise<void> {
+    // Ensure column and row are within bounds
+    if (column < 0 || column >= 5 || row < 0 || row >= 3) {
+      streamDeck.logger.info(`Invalid coordinates: [${column}, ${row}]`);
+      return;
     }
-  }
-}
-
-/**
- * Update the visual for a specific button
- */
-private async updateButtonVisual(action: any, column: number, row: number): Promise<void> {
-  // Ensure column and row are within bounds
-  if (column < 0 || column >= 5 || row < 0 || row >= 3) {
-    streamDeck.logger.info(`Invalid coordinates: [${column}, ${row}]`);
-    return;
-  }
-  
-  const cell = this.board[column][row];
-  
-  // Set image based on cell state
-  let imagePath;
-  if (cell === PLAYER_ONE) {
-    imagePath = 'imgs/actions/deckdrop/red_token_in_slot.svg';
-  } else if (cell === PLAYER_TWO) {
-    imagePath = 'imgs/actions/deckdrop/yellow_token_in_slot.svg';
-  } else {
-    imagePath = 'imgs/actions/deckdrop/empty_slot.svg';
-  }
-  
-  // Add visual indicator for current player on empty slots
-  if (cell === EMPTY && !this.gameOver) {
-    // If this column is not full, highlight the topmost empty slot
-    let isTopEmptyInColumn = false;
     
-    // Find the topmost empty slot in this column
-    for (let r = 0; r < 3; r++) {
-      if (this.board[column][r] === EMPTY) {
-        isTopEmptyInColumn = (r === row);
-        break;
+    const cell = this.board[column][row];
+    
+    // Set image based on cell state
+    let imagePath;
+    if (cell === PLAYER_ONE) {
+      imagePath = 'imgs/actions/deckdrop/red_token_in_slot.svg';
+    } else if (cell === PLAYER_TWO) {
+      imagePath = 'imgs/actions/deckdrop/yellow_token_in_slot.svg';
+    } else {
+      imagePath = 'imgs/actions/deckdrop/empty_slot.svg';
+    }
+    
+    // Add visual indicator for current player on empty slots
+    if (cell === EMPTY && !this.gameOver) {
+      // If this column is not full, highlight the topmost empty slot
+      let isTopEmptyInColumn = false;
+      
+      // Find the topmost empty slot in this column
+      for (let r = 0; r < 3; r++) {
+        if (this.board[column][r] === EMPTY) {
+          isTopEmptyInColumn = (r === row);
+          break;
+        }
       }
+      
+      // Uncomment if you want to add highlighting
+      // if (isTopEmptyInColumn) {
+      //   imagePath = this.currentPlayer === PLAYER_ONE 
+      //     ? 'imgs/actions/deckdrop/empty_slot_highlight_red.svg'
+      //     : 'imgs/actions/deckdrop/empty_slot_highlight_yellow.svg';
+      // }
     }
     
-    // // Highlight the slot if it's the topmost empty slot in its column
-    // if (isTopEmptyInColumn) {
-    //   imagePath = this.currentPlayer === PLAYER_ONE 
-    //     ? 'imgs/actions/deckdrop/empty_slot_highlight_red.svg'
-    //     : 'imgs/actions/deckdrop/empty_slot_highlight_yellow.svg';
-    // }
-  }
-  
-  try {
-    if (action.setImage) {
-      return action.setImage(imagePath);
+    try {
+      if (action.setImage) {
+        return action.setImage(imagePath);
+      }
+    } catch (error) {
+      streamDeck.logger.error(`Error setting image: ${error}`);
     }
-  } catch (error) {
-    streamDeck.logger.error(`Error setting image: ${error}`);
   }
-}
 
   /**
    * Check if the last move resulted in a win
