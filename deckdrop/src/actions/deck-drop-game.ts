@@ -5,8 +5,8 @@ import streamDeck, {
   WillAppearEvent,
   WillDisappearEvent
 } from "@elgato/streamdeck";
-import { WinChecker } from "./win-checker";
 import { GameRenderer, EMPTY, PLAYER_ONE, PLAYER_TWO } from "./game-renderer";
+import { GameLogic } from "./game-logic";
 
 type GameSettings = {
   currentPlayer: number; 
@@ -20,16 +20,7 @@ type ActionMap = Map<CoordinateKey, any>;
 
 @action({ UUID: "com.practical-engineer.deckdrop.game" })
 export class DeckDropGame extends SingletonAction<GameSettings> {
-  // Game board (3 rows × 5 columns)
-  private board: number[][] = [
-    [EMPTY, EMPTY, EMPTY, EMPTY, EMPTY], // Row 0
-    [EMPTY, EMPTY, EMPTY, EMPTY, EMPTY], // Row 1
-    [EMPTY, EMPTY, EMPTY, EMPTY, EMPTY], // Row 2
-  ];
-  
-  private currentPlayer: number = PLAYER_ONE;
-  private gameOver: boolean = false;
-  private winChecker: WinChecker = new WinChecker();
+  private gameLogic: GameLogic;
   private renderer: GameRenderer;
 
   // Map to store actions by coordinates
@@ -37,6 +28,7 @@ export class DeckDropGame extends SingletonAction<GameSettings> {
 
   constructor() {
     super();
+    this.gameLogic = new GameLogic();
     this.renderer = new GameRenderer(this.actionLookup);
   }
   
@@ -65,9 +57,8 @@ export class DeckDropGame extends SingletonAction<GameSettings> {
       streamDeck.logger.info(`Stored action at coordinates [${row}, ${col}]`);
     }
     
-    // Load game state from settings if available
-    this.currentPlayer = ev.payload.settings.currentPlayer;
-    this.gameOver = ev.payload.settings.gameOver;
+    // TODO: Load game state from settings if available
+    // Currently not implemented as we need to serialize/deserialize the game state
 
     
     // Switch to the DeckDrop profile if we haven't already
@@ -109,89 +100,25 @@ export class DeckDropGame extends SingletonAction<GameSettings> {
     // Check if the pressed button is in the top row (row=0)
     if (ev.action.coordinates && ev.action.coordinates.row === 0) {
       const column = ev.action.coordinates.column;
-      this.makeMove(column);
-      this.renderer.renderBoard(this.board);
+      
+      // Make the move and handle game over condition
+      const moveResult = this.gameLogic.makeMove(column, this.renderer.showWinner.bind(this.renderer));
+      
+      // Render the updated board
+      this.renderer.renderBoard(this.gameLogic.getBoard());
+      
+      // If the game is over, schedule a reset
+      if (moveResult && this.gameLogic.isGameOver()) {
+        setTimeout(() => {
+          this.gameLogic.resetGame();
+          this.renderer.renderBoard(this.gameLogic.getBoard());
+        }, 5000); // Wait for animation to complete (5 seconds)
+      }
     } else {
       // If it's not a button in the top row, do nothing
       streamDeck.logger.info('Button not in top row, no action taken');
     }
   }
 
-  /**
-   * Make a move in the specified column
-   */
-  private makeMove(column: number): boolean {
-    // Find the lowest empty row in the column
-    let row = -1;
-    for (let r = 2; r >= 0; r--) {
-      if (this.board[r][column] === EMPTY) {
-        row = r;
-        break;
-      }
-    }
-    
-    // Column is full
-    if (row === -1) return false;
-    
-    // Place token
-    this.board[row][column] = this.currentPlayer;
-    
-    // Log the move for debugging
-    streamDeck.logger.info(`Player ${this.currentPlayer} placed at [${row}, ${column}]`);
-    streamDeck.logger.info('Current board:', JSON.stringify(this.board));
-    
-    // Check for winner
-    if (this.winChecker.checkWinner(this.board, row, column, this.renderer.showWinner.bind(this.renderer))) {
-      streamDeck.logger.info(`Player ${this.currentPlayer} wins!`);
-      this.gameOver = true;
-      // Game will be reset after the winner animation completes
-      setTimeout(() => {
-        this.resetGame();
-        this.renderer.renderBoard(this.board);
-        }, 5000); // Wait for animation to complete (5 seconds)
-
-      return true;
-    }
-    
-    // Check for draw
-    if (this.isBoardFull()) {
-      streamDeck.logger.info('Game ended in a draw');
-      this.gameOver = true;
-      return true;
-    }
-    
-    // Switch player
-    this.currentPlayer = this.currentPlayer === PLAYER_ONE ? PLAYER_TWO : PLAYER_ONE;
-    return true;
-  }
-
-  /**
-   * Reset the game
-   */
-  private resetGame(): void {
-    this.board = [
-      [EMPTY, EMPTY, EMPTY, EMPTY, EMPTY], // Row 0
-      [EMPTY, EMPTY, EMPTY, EMPTY, EMPTY], // Row 1
-      [EMPTY, EMPTY, EMPTY, EMPTY, EMPTY], // Row 2
-    ];
-    this.currentPlayer = PLAYER_ONE;
-    this.gameOver = false;
-    streamDeck.logger.info('Game reset');
-  }
-
-
-  /**
-   * Check if the board is full (draw condition)
-   */
-  private isBoardFull(): boolean {
-    for (let c = 0; c < 5; c++) {
-      for (let r = 0; r < 3; r++) {
-        if (this.board[r][c] === EMPTY) {
-          return false;
-        }
-      }
-    }
-    return true;
-  }
 
 }
