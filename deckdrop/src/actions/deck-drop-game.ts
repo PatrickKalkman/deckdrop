@@ -147,7 +147,7 @@ export class DeckDropGame extends SingletonAction<GameSettings> {
       // Game will be reset after the winner animation completes
       setTimeout(() => {
         this.resetGame();
-        this.renderBoard();
+        this.renderer.renderBoard(this.board);
         }, 5000); // Wait for animation to complete (5 seconds)
 
       return true;
