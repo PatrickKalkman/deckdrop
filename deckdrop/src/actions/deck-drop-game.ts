@@ -146,6 +146,7 @@ export class DeckDropGame extends SingletonAction<GameSettings> {
     if (this.checkWinner(row, column)) {
       streamDeck.logger.info(`Player ${this.currentPlayer} wins!`);
       this.gameOver = true;
+      this.resetGame();
       return true;
     }
     
