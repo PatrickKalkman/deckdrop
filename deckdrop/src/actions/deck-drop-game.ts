@@ -129,9 +129,9 @@ export class DeckDropGame extends SingletonAction<GameSettings> {
       const targetAction = this.actionLookup.get(targetKey);
       
       if (targetAction) {
-        // Change the state of the target action to 1
-        targetAction.setImage('imgs/actions/deckdrop/red-token-in-slot.svg');
-        streamDeck.logger.info(`Changed button at [${column}, 2] to 1`);
+        this.makeMove(column);
+
+        
       } else {
         streamDeck.logger.info(`No action found at coordinates [${column}, 2]`);
       }
@@ -139,23 +139,6 @@ export class DeckDropGame extends SingletonAction<GameSettings> {
       // If it's not a button in the top row, do nothing
       streamDeck.logger.info('Button not in top row, no action taken');
     }
-  }
-  
-  /**
-   * Toggle cell state between empty and specified player
-   */
-  private toggleCellState(col: number, row: number, player: number = PLAYER_ONE): void {
-    // Ensure column and row are within bounds
-    if (col < 0 || col >= 5 || row < 0 || row >= 3) {
-      streamDeck.logger.info(`Invalid coordinates: [${col}, ${row}]`);
-      return;
-    }
-    
-    // Toggle between empty and specified player
-    this.board[col][row] = this.board[col][row] === EMPTY ? player : EMPTY;
-    
-    streamDeck.logger.info(`Toggled cell at [${col}, ${row}] to ${this.board[col][row]}`);
-    streamDeck.logger.info('Current board:', JSON.stringify(this.board));
   }
 
 /**
@@ -184,7 +167,7 @@ private async refreshDeck(action: any): Promise<void> {
     // Find the lowest empty row in the column
     let row = -1;
     for (let r = 2; r >= 0; r--) {
-      if (this.board[column][r] === EMPTY) {
+      if (this.board[r][column] === EMPTY) {
         row = r;
         break;
       }
@@ -194,14 +177,14 @@ private async refreshDeck(action: any): Promise<void> {
     if (row === -1) return false;
     
     // Place token
-    this.board[column][row] = this.currentPlayer;
+    this.board[row][column] = this.currentPlayer;
     
     // Log the move for debugging
-    streamDeck.logger.info(`Player ${this.currentPlayer} placed at [${column}, ${row}]`);
+    streamDeck.logger.info(`Player ${this.currentPlayer} placed at [${row}, ${column}]`);
     streamDeck.logger.info('Current board:', JSON.stringify(this.board));
     
     // Check for winner
-    if (this.checkWinner(column, row)) {
+    if (this.checkWinner(row, column)) {
       streamDeck.logger.info(`Player ${this.currentPlayer} wins!`);
       this.gameOver = true;
       return true;
@@ -256,13 +239,13 @@ private async refreshDeck(action: any): Promise<void> {
   /**
    * Check if the last move resulted in a win
    */
-  private checkWinner(col: number, row: number): boolean {
-    const player = this.board[col][row];
+  private checkWinner(row: number, col: number): boolean {
+    const player = this.board[row][col];
     
     // Check horizontal
     let count = 0;
     for (let c = 0; c < 5; c++) {
-      if (this.board[c][row] === player) {
+      if (this.board[row][c] === player) {
         count++;
         if (count === 3) return true;
       } else {
@@ -273,7 +256,7 @@ private async refreshDeck(action: any): Promise<void> {
     // Check vertical
     count = 0;
     for (let r = 0; r < 3; r++) {
-      if (this.board[col][r] === player) {
+      if (this.board[r][col] === player) {
         count++;
         if (count === 3) return true;
       } else {
@@ -285,9 +268,9 @@ private async refreshDeck(action: any): Promise<void> {
     for (let c = 0; c < 3; c++) {
       for (let r = 0; r < 1; r++) {
         if (
-          this.board[c][r] === player &&
-          this.board[c+1][r+1] === player &&
-          this.board[c+2][r+2] === player
+          this.board[r][c] === player &&
+          this.board[r+1][c+1] === player &&
+          this.board[r+2][c+2] === player
         ) {
           return true;
         }
@@ -298,9 +281,9 @@ private async refreshDeck(action: any): Promise<void> {
     for (let c = 0; c < 3; c++) {
       for (let r = 2; r > 1; r--) {
         if (
-          this.board[c][r] === player &&
-          this.board[c+1][r-1] === player &&
-          this.board[c+2][r-2] === player
+          this.board[r][c] === player &&
+          this.board[r-1][c+1] === player &&
+          this.board[r-2][c+2] === player
         ) {
           return true;
         }
@@ -316,7 +299,7 @@ private async refreshDeck(action: any): Promise<void> {
   private isBoardFull(): boolean {
     for (let c = 0; c < 5; c++) {
       for (let r = 0; r < 3; r++) {
-        if (this.board[c][r] === EMPTY) {
+        if (this.board[r][c] === EMPTY) {
           return false;
         }
       }
