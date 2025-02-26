@@ -23,7 +23,7 @@ type ActionMap = Map<CoordinateKey, any>;
 
 @action({ UUID: "com.practical-engineer.deckdrop.game" })
 export class DeckDropGame extends SingletonAction<GameSettings> {
-  // Game board (5 rows × 3 columns)
+  // Game board (3 rows × 5 columns)
   private board: number[][] = [
     [EMPTY, EMPTY, EMPTY, EMPTY, EMPTY], // Row 0
     [EMPTY, EMPTY, EMPTY, EMPTY, EMPTY], // Row 1
@@ -167,11 +167,9 @@ export class DeckDropGame extends SingletonAction<GameSettings> {
    */
   private resetGame(): void {
     this.board = [
-      [EMPTY, EMPTY, EMPTY],
-      [EMPTY, EMPTY, EMPTY],
-      [EMPTY, EMPTY, EMPTY],
-      [EMPTY, EMPTY, EMPTY],
-      [EMPTY, EMPTY, EMPTY],
+      [EMPTY, EMPTY, EMPTY, EMPTY, EMPTY], // Row 0
+      [EMPTY, EMPTY, EMPTY, EMPTY, EMPTY], // Row 1
+      [EMPTY, EMPTY, EMPTY, EMPTY, EMPTY], // Row 2
     ];
     this.currentPlayer = PLAYER_ONE;
     this.gameOver = false;
