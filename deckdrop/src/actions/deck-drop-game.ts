@@ -5,6 +5,7 @@ import streamDeck, {
   WillAppearEvent,
   WillDisappearEvent
 } from "@elgato/streamdeck";
+import { WinChecker } from "./win-checker";
 
 // Board states
 const EMPTY = 0; 
@@ -32,6 +33,7 @@ export class DeckDropGame extends SingletonAction<GameSettings> {
   
   private currentPlayer: number = PLAYER_ONE;
   private gameOver: boolean = false;
+  private winChecker: WinChecker = new WinChecker();
 
   // Map to store actions by coordinates
   private actionLookup: ActionMap = new Map();
@@ -137,7 +139,7 @@ export class DeckDropGame extends SingletonAction<GameSettings> {
     streamDeck.logger.info('Current board:', JSON.stringify(this.board));
     
     // Check for winner
-    if (this.checkWinner(row, column)) {
+    if (this.winChecker.checkWinner(this.board, row, column, this.showWinner.bind(this))) {
       streamDeck.logger.info(`Player ${this.currentPlayer} wins!`);
       this.gameOver = true;
       // Game will be reset after the winner animation completes
@@ -175,134 +177,6 @@ export class DeckDropGame extends SingletonAction<GameSettings> {
     streamDeck.logger.info('Game reset');
   }
 
-  /**
-   * Check if the last move resulted in a win
-   */
-  private checkWinner(row: number, col: number): boolean {
-    const player = this.board[row][col];
-    
-    // Check each win condition
-    return (
-      this.checkHorizontalWin(row, player) ||
-      this.checkVerticalWin(col, player) ||
-      this.checkDiagonalDownWin(player) ||
-      this.checkDiagonalUpWin(player)
-    );
-  }
-
-  /**
-   * Check for horizontal win (row-based)
-   */
-  private checkHorizontalWin(row: number, player: number): boolean {
-    const winningPositions: [number, number][] = [];
-    let count = 0;
-    let startCol = 0;
-    
-    for (let c = 0; c < 5; c++) {
-      if (this.board[row][c] === player) {
-        if (count === 0) startCol = c;
-        count++;
-        if (count === 3) {
-          for (let i = 0; i < 3; i++) {
-            winningPositions.push([row, startCol + i]);
-          }
-          this.showWinner(winningPositions, player);
-          return true;
-        }
-      } else {
-        count = 0;
-      }
-    }
-    
-    return false;
-  }
-
-  /**
-   * Check for vertical win (column-based)
-   */
-  private checkVerticalWin(col: number, player: number): boolean {
-    const winningPositions: [number, number][] = [];
-    let count = 0;
-    let startRow = 0;
-    
-    for (let r = 0; r < 3; r++) {
-      if (this.board[r][col] === player) {
-        if (count === 0) startRow = r;
-        count++;
-        if (count === 3) {
-          for (let i = 0; i < 3; i++) {
-            winningPositions.push([startRow + i, col]);
-          }
-          this.showWinner(winningPositions, player);
-          return true;
-        }
-      } else {
-        count = 0;
-      }
-    }
-    
-    return false;
-  }
-
-  /**
-   * Check for diagonal win (top-left to bottom-right)
-   */
-  private checkDiagonalDownWin(player: number): boolean {
-    const winningPositions: [number, number][] = [];
-    
-    // Can only start from row 0
-    for (let r = 0; r <= 0; r++) {
-      // Can only start from columns 0, 1, or 2
-      for (let c = 0; c <= 2; c++) {
-        // Make sure we don't go out of bounds
-        if (r+2 < 3 && c+2 < 5) {
-          if (
-            this.board[r][c] === player &&
-            this.board[r+1][c+1] === player &&
-            this.board[r+2][c+2] === player
-          ) {
-            winningPositions.push([r, c]);
-            winningPositions.push([r+1, c+1]);
-            winningPositions.push([r+2, c+2]);
-            this.showWinner(winningPositions, player);
-            return true;
-          }
-        }
-      }
-    }
-    
-    return false;
-  }
-
-  /**
-   * Check for diagonal win (bottom-left to top-right)
-   */
-  private checkDiagonalUpWin(player: number): boolean {
-    const winningPositions: [number, number][] = [];
-    
-    // Can only start from row 2
-    for (let r = 2; r >= 2; r--) {
-      // Can only start from columns 0, 1, or 2
-      for (let c = 0; c <= 2; c++) {
-        // Make sure we don't go out of bounds
-        if (r-2 >= 0 && c+2 < 5) {
-          if (
-            this.board[r][c] === player &&
-            this.board[r-1][c+1] === player &&
-            this.board[r-2][c+2] === player
-          ) {
-            winningPositions.push([r, c]);
-            winningPositions.push([r-1, c+1]);
-            winningPositions.push([r-2, c+2]);
-            this.showWinner(winningPositions, player);
-            return true;
-          }
-        }
-      }
-    }
-    
-    return false;
-  }
 
   /**
    * Check if the board is full (draw condition)
