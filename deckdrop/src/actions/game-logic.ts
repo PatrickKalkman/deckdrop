@@ -9,13 +9,13 @@ export class GameLogic {
     [EMPTY, EMPTY, EMPTY, EMPTY, EMPTY], // Row 0
     [EMPTY, EMPTY, EMPTY, EMPTY, EMPTY], // Row 1
     [EMPTY, EMPTY, EMPTY, EMPTY, EMPTY], // Row 2
-  ];
+  ]; 
   private currentPlayer: number = PLAYER_ONE;
   private gameOver: boolean = false;
   private winChecker: WinChecker = new WinChecker();
   private aiOpponent: AIOpponent;
   private vsAI: boolean = true; // Play against AI by default
-  private aiDelay: number = 750; // Delay in ms for AI moves
+  private aiDelay: number = 2000; // Delay in ms for AI moves
   
   constructor() {
     this.aiOpponent = new AIOpponent();
@@ -110,25 +110,40 @@ export class GameLogic {
     return true;
   }
   
-  /**
-   * Make an AI move
-   */
   private makeAIMove(): void {
     if (this.gameOver) return;
     
     const aiColumn = this.aiOpponent.getBestMove(this.board);
     if (aiColumn >= 0 && aiColumn < 5) {
       streamDeck.logger.info(`AI is making move in column ${aiColumn}`);
+      
       // We'll use the onWin callback passed to this function
       // This will be called in makeMove if there's a win
       const onWinCallback = (positions: [number, number][], player: number) => {
         this.onWinHandler?.(positions, player);
       };
       
-      this.makeMove(aiColumn, onWinCallback);
+      // Make the move
+      const moveResult = this.makeMove(aiColumn, onWinCallback);
+      
+      // Ensure the board is rendered after AI makes a move
+      if (this.renderCallback) {
+        this.renderCallback(this.board);
+      }
     } else {
       streamDeck.logger.error(`AI returned invalid column: ${aiColumn}`);
     }
+  }
+
+  // Add a new property to store the render callback
+  private renderCallback?: (board: number[][]) => void;
+  
+  /**
+   * Set a callback function to render the board after AI moves
+   * @param callback The function to call to render the board
+   */
+  public setRenderCallback(callback: (board: number[][]) => void): void {
+    this.renderCallback = callback;
   }
   
   // Store the onWin handler for AI moves
@@ -154,6 +169,10 @@ export class GameLogic {
     this.currentPlayer = PLAYER_ONE;
     this.gameOver = false;
     streamDeck.logger.info('Game reset');
+
+    if (this.renderCallback) {
+      this.renderCallback(this.board);
+    }
     
     // If AI is player 1, make AI move
     if (this.vsAI && !this.aiOpponent.isPlayerTwo) {

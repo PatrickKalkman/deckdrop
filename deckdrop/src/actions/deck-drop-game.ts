@@ -44,7 +44,7 @@ export class DeckDropGame extends SingletonAction<GameSettings> {
 
   private getCoordinateKey(row: number, col: number): CoordinateKey {
     return `${row},${col}`;
-  }
+  } 
 
   /**
    * Occurs when the action appears on Stream Deck
@@ -138,49 +138,6 @@ export class DeckDropGame extends SingletonAction<GameSettings> {
       coordinates: ev.action.coordinates,
       settings: ev.payload.settings
     });
-    
-    // Check if controller button was pressed
-    if (ev.payload.settings?.isController) {
-      // Toggle game mode
-      const currentVsAI = ev.payload.settings?.vsAI ?? true;
-      const currentAIPlayer = ev.payload.settings?.aiIsPlayerTwo ?? true;
-      
-      // Determine the next game configuration
-      let nextVsAI = currentVsAI;
-      let nextAIPlayer = currentAIPlayer;
-      
-      if (currentVsAI && currentAIPlayer) {
-        // Current: AI is player 2, Next: AI is player 1
-        nextAIPlayer = false;
-      } else if (currentVsAI && !currentAIPlayer) {
-        // Current: AI is player 1, Next: Two human players
-        nextVsAI = false;
-      } else {
-        // Current: Two human players, Next: AI is player 2
-        nextVsAI = true;
-        nextAIPlayer = true;
-      }
-      
-      // Update settings
-      await ev.action.setSettings({
-        ...ev.payload.settings,
-        vsAI: nextVsAI,
-        aiIsPlayerTwo: nextAIPlayer
-      });
-      
-      // Update game logic
-      this.gameLogic.setVsAI(nextVsAI);
-      this.gameLogic.setAIPlayer(nextAIPlayer);
-      
-      // Update controller image
-      this.updateControllerImage(nextVsAI, nextAIPlayer);
-      
-      // Reset the game
-      this.gameLogic.resetGame();
-      this.renderer.renderBoard(this.gameLogic.getBoard());
-      
-      return;
-    }
 
     // Check if the pressed button is in the top row (row=0)
     if (ev.action.coordinates && ev.action.coordinates.row === 0) {
