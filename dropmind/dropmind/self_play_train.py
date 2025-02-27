@@ -64,13 +64,15 @@ def self_play_train(
     q_table_sizes = []
     exploration_rates = []
     elo_ratings = [1000]  # Starting ELO rating
+    
+    # Training the agent as player 2
 
     start_time = time.time()
 
     # Training loop
     for episode in tqdm(range(episodes)):
         state = env.reset()
-        is_primary_turn = True  # Primary agent starts as player 1
+        is_primary_turn = False  # Primary agent is player 2, opponent starts as player 1
         total_reward = 0
         game_steps = 0
 
@@ -97,8 +99,8 @@ def self_play_train(
             if not done:
                 next_valid_actions = env.get_valid_actions()
 
-            # Calculate reward for the primary agent (player 1)
-            # If it's player 2's turn now, we need to invert the reward
+            # Calculate reward for the primary agent (player 2)
+            # If it's player 1's turn now, we need to invert the reward
             primary_reward = reward if is_primary_turn else -reward
 
             # Update Q-values for primary agent
@@ -126,11 +128,11 @@ def self_play_train(
                 time.sleep(0.5)  # Pause to make rendering visible
 
         # Record game result
-        if env.winner == 1:  # Primary agent won
+        if env.winner == 2:  # Primary agent won (now player 2)
             primary_wins.append(1)
             opponent_wins.append(0)
             draws.append(0)
-        elif env.winner == 2:  # Opponent agent won
+        elif env.winner == 1:  # Opponent agent won (now player 1)
             primary_wins.append(0)
             opponent_wins.append(1)
             draws.append(0)
@@ -144,7 +146,7 @@ def self_play_train(
             elo_ratings.append(
                 _update_elo(
                     elo_ratings[-1],
-                    env.winner == 1,  # True if primary agent won
+                    env.winner == 2,  # True if primary agent won (now player 2)
                     k_factor=32,
                 )
             )
@@ -207,6 +209,9 @@ def _convert_state_for_opponent(state):
 
     In Connect Three, we need to swap the player numbers (1 and 2)
     to allow the agent to learn from both perspectives.
+    
+    Since the primary agent is now player 2, this function is used
+    to convert states for the opponent (player 1).
     """
     # Convert string to list for easy manipulation
     state_list = list(state)
