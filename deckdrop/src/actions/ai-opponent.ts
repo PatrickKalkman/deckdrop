@@ -16,7 +16,7 @@ export class AIOpponent {
   private async loadQTable(): Promise<void> {
     try {
       // Adjust the path to where your qtable JSON is stored
-      const response = await fetch('./qtable_final.json');
+      const response = await fetch('./data/qtable_final.json');
       this.qTable = await response.json();
       streamDeck.logger.info('Q-table loaded successfully');
     } catch (error) {
