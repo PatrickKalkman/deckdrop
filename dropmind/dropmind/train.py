@@ -35,7 +35,7 @@ def train(
         render_interval: If > 0, render the game every X episodes
     """
     # Create output directory
-    os.makedirs("models", exist_ok=True)
+    os.makedirs("./dropmind/models", exist_ok=True)
 
     # Initialize environment and agent
     env = ConnectThreeEnv()
@@ -135,9 +135,9 @@ def train(
             recent_draw_rate = np.mean(draws[-100:])
 
             # Save models
-            agent.save_qtable_pickle(f"models/qtable_episode_{episode + 1}.pkl")
+            agent.save_qtable_pickle(f"dropmind/models/qtable_episode_{episode + 1}.pkl")
             if save_json:
-                agent.save_qtable_json(f"models/qtable_episode_{episode + 1}.json")
+                agent.save_qtable_json(f"dropmind/models/qtable_episode_{episode + 1}.json")
 
             # Log progress
             elapsed_time = time.time() - start_time
@@ -153,9 +153,9 @@ def train(
             plot_metrics(episode, rewards, wins, losses, draws, q_table_sizes, exploration_rates)
 
     # Final save
-    agent.save_qtable_pickle("models/qtable_final.pkl")
+    agent.save_qtable_pickle("dropmind/models/qtable_final.pkl")
     if save_json:
-        agent.save_qtable_json("models/qtable_final.json")
+        agent.save_qtable_json("dropmind/models/qtable_final.json")
 
     return agent, rewards, wins, losses, draws
 
@@ -216,7 +216,7 @@ def plot_metrics(episode, rewards, wins, losses, draws, q_table_sizes, explorati
     plt.ylim(0, 1)
 
     plt.tight_layout()
-    plt.savefig(f"models/training_progress_episode_{episode + 1}.png")
+    plt.savefig(f"dropmind/graphs/training_progress_episode_{episode + 1}.png")
     plt.close()
 
 
