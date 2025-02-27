@@ -2,9 +2,6 @@
 	"Name": "deckdrop",
 	"Version": "0.1.0.0",
 	"Author": "Patrick Kalkman",
-	"Files": [
-		"data/qtable_final.json"
-	],
 	"Actions": [
 		{
 			"UUID": "com.practical-engineer.deckdrop.game",
