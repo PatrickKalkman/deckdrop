@@ -138,103 +138,207 @@ class ConnectThreeEnv:
 
     def _calculate_state_value(self, player):
         """
-        Calculate a value representing how good the current board state is for the given player.
-        Considers two-in-a-row patterns without the third position being blocked.
-
+        Enhanced state value calculation with improved recognition of:
+        - Immediate threats (must-block situations)
+        - Fork opportunities (multiple threats)
+        - Blocking value based on threat urgency
+        - Strategic positions
+        
         Returns:
             float: A value representing the "goodness" of the state for the player
         """
         board = self.board
         opponent = 3 - player
         state_value = 0
-
-        # Check for two in a row with an open third position (horizontal)
+        
+        # Track immediate threats for both players
+        player_immediate_threats = 0
+        opponent_immediate_threats = 0
+        player_potential_threats = 0
+        opponent_potential_threats = 0
+        
+        # --- Check for immediate winning moves (highest priority) ---
+        
+        # Check horizontal immediate threats
         for r in range(3):
             for c in range(3):
-                # Two horizontal with open third
+                # Player's immediate winning move
                 if (
-                    (board[r][c] == player and board[r][c + 1] == player and board[r][c + 2] == 0)
-                    or (board[r][c] == player and board[r][c + 1] == 0 and board[r][c + 2] == player)
-                    or (board[r][c] == 0 and board[r][c + 1] == player and board[r][c + 2] == player)
+                    (board[r][c] == player and board[r][c+1] == player and board[r][c+2] == 0 and (r == 2 or board[r+1][c+2] != 0)) or
+                    (board[r][c] == player and board[r][c+1] == 0 and board[r][c+2] == player and (r == 2 or board[r+1][c+1] != 0)) or
+                    (board[r][c] == 0 and board[r][c+1] == player and board[r][c+2] == player and (r == 2 or board[r+1][c] != 0))
                 ):
-                    state_value += 1
+                    player_immediate_threats += 1
+                    state_value += 3.0  # Highly value immediate winning moves
+                
+                # Opponent's immediate winning move
+                if (
+                    (board[r][c] == opponent and board[r][c+1] == opponent and board[r][c+2] == 0 and (r == 2 or board[r+1][c+2] != 0)) or
+                    (board[r][c] == opponent and board[r][c+1] == 0 and board[r][c+2] == opponent and (r == 2 or board[r+1][c+1] != 0)) or
+                    (board[r][c] == 0 and board[r][c+1] == opponent and board[r][c+2] == opponent and (r == 2 or board[r+1][c] != 0))
+                ):
+                    opponent_immediate_threats += 1
+                    state_value += 2.5  # Highly value blocking opponent's wins
+
+                # Two horizontal with open third (potential threats)
+                if (
+                    (board[r][c] == player and board[r][c + 1] == player and board[r][c + 2] == 0) or
+                    (board[r][c] == player and board[r][c + 1] == 0 and board[r][c + 2] == player) or
+                    (board[r][c] == 0 and board[r][c + 1] == player and board[r][c + 2] == player)
+                ):
+                    player_potential_threats += 1
+                    state_value += 1.0
 
                 # Opponent two horizontal with open third (defensive value)
                 if (
-                    (board[r][c] == opponent and board[r][c + 1] == opponent and board[r][c + 2] == 0)
-                    or (board[r][c] == opponent and board[r][c + 1] == 0 and board[r][c + 2] == opponent)
-                    or (board[r][c] == 0 and board[r][c + 1] == opponent and board[r][c + 2] == opponent)
+                    (board[r][c] == opponent and board[r][c + 1] == opponent and board[r][c + 2] == 0) or
+                    (board[r][c] == opponent and board[r][c + 1] == 0 and board[r][c + 2] == opponent) or
+                    (board[r][c] == 0 and board[r][c + 1] == opponent and board[r][c + 2] == opponent)
                 ):
+                    opponent_potential_threats += 1
                     state_value += 0.5  # Defensive value is worth less than offensive
 
-        # Check for two in a row with an open third position (vertical)
+        # Check vertical immediate threats
         for r in range(1):
             for c in range(5):
-                # Two vertical with open third
+                # Player's immediate vertical winning move
+                if board[r][c] == player and board[r+1][c] == player and board[r+2][c] == 0:
+                    player_immediate_threats += 1
+                    state_value += 3.0
+                
+                # Opponent's immediate vertical winning move
+                if board[r][c] == opponent and board[r+1][c] == opponent and board[r+2][c] == 0:
+                    opponent_immediate_threats += 1
+                    state_value += 2.5
+
+                # Two vertical with open third (potential threats)
                 if (
-                    (board[r][c] == player and board[r + 1][c] == player and board[r + 2][c] == 0)
-                    or (board[r][c] == player and board[r + 1][c] == 0 and board[r + 2][c] == player)
-                    or (board[r][c] == 0 and board[r + 1][c] == player and board[r + 2][c] == player)
+                    (board[r][c] == player and board[r + 1][c] == player and board[r + 2][c] == 0) or
+                    (board[r][c] == player and board[r + 1][c] == 0 and board[r + 2][c] == player) or
+                    (board[r][c] == 0 and board[r + 1][c] == player and board[r + 2][c] == player)
                 ):
-                    state_value += 1
+                    player_potential_threats += 1
+                    state_value += 1.0
 
                 # Opponent two vertical with open third (defensive value)
                 if (
-                    (board[r][c] == opponent and board[r + 1][c] == opponent and board[r + 2][c] == 0)
-                    or (board[r][c] == opponent and board[r + 1][c] == 0 and board[r + 2][c] == opponent)
-                    or (board[r][c] == 0 and board[r + 1][c] == opponent and board[r + 2][c] == opponent)
+                    (board[r][c] == opponent and board[r + 1][c] == opponent and board[r + 2][c] == 0) or
+                    (board[r][c] == opponent and board[r + 1][c] == 0 and board[r + 2][c] == opponent) or
+                    (board[r][c] == 0 and board[r + 1][c] == opponent and board[r + 2][c] == opponent)
                 ):
+                    opponent_potential_threats += 1
                     state_value += 0.5
 
-        # Check for two in a row with an open third position (diagonal /)
+        # Check diagonal immediate threats (/)
         for r in range(2, 3):
             for c in range(3):
-                # Two diagonal / with open third
+                # Player's immediate diagonal (/) winning move
                 if (
-                    (board[r][c] == player and board[r - 1][c + 1] == player and board[r - 2][c + 2] == 0)
-                    or (board[r][c] == player and board[r - 1][c + 1] == 0 and board[r - 2][c + 2] == player)
-                    or (board[r][c] == 0 and board[r - 1][c + 1] == player and board[r - 2][c + 2] == player)
+                    (board[r][c] == player and board[r-1][c+1] == player and board[r-2][c+2] == 0) or
+                    (board[r][c] == player and board[r-1][c+1] == 0 and board[r-2][c+2] == player) or
+                    (board[r][c] == 0 and board[r-1][c+1] == player and board[r-2][c+2] == player)
                 ):
-                    state_value += 1
+                    player_immediate_threats += 1
+                    state_value += 3.0
+                
+                # Opponent's immediate diagonal (/) winning move
+                if (
+                    (board[r][c] == opponent and board[r-1][c+1] == opponent and board[r-2][c+2] == 0) or
+                    (board[r][c] == opponent and board[r-1][c+1] == 0 and board[r-2][c+2] == opponent) or
+                    (board[r][c] == 0 and board[r-1][c+1] == opponent and board[r-2][c+2] == opponent)
+                ):
+                    opponent_immediate_threats += 1
+                    state_value += 2.5
+
+                # Two diagonal / with open third (potential threats)
+                if (
+                    (board[r][c] == player and board[r - 1][c + 1] == player and board[r - 2][c + 2] == 0) or
+                    (board[r][c] == player and board[r - 1][c + 1] == 0 and board[r - 2][c + 2] == player) or
+                    (board[r][c] == 0 and board[r - 1][c + 1] == player and board[r - 2][c + 2] == player)
+                ):
+                    player_potential_threats += 1
+                    state_value += 1.0
 
                 # Opponent two diagonal / with open third (defensive value)
                 if (
-                    (board[r][c] == opponent and board[r - 1][c + 1] == opponent and board[r - 2][c + 2] == 0)
-                    or (board[r][c] == opponent and board[r - 1][c + 1] == 0 and board[r - 2][c + 2] == opponent)
-                    or (board[r][c] == 0 and board[r - 1][c + 1] == opponent and board[r - 2][c + 2] == opponent)
+                    (board[r][c] == opponent and board[r - 1][c + 1] == opponent and board[r - 2][c + 2] == 0) or
+                    (board[r][c] == opponent and board[r - 1][c + 1] == 0 and board[r - 2][c + 2] == opponent) or
+                    (board[r][c] == 0 and board[r - 1][c + 1] == opponent and board[r - 2][c + 2] == opponent)
                 ):
+                    opponent_potential_threats += 1
                     state_value += 0.5
 
-        # Check for two in a row with an open third position (diagonal \)
+        # Check diagonal immediate threats (\)
         for r in range(1):
             for c in range(3):
-                # Two diagonal \ with open third
+                # Player's immediate diagonal (\) winning move
                 if (
-                    (board[r][c] == player and board[r + 1][c + 1] == player and board[r + 2][c + 2] == 0)
-                    or (board[r][c] == player and board[r + 1][c + 1] == 0 and board[r + 2][c + 2] == player)
-                    or (board[r][c] == 0 and board[r + 1][c + 1] == player and board[r + 2][c + 2] == player)
+                    (board[r][c] == player and board[r+1][c+1] == player and board[r+2][c+2] == 0) or
+                    (board[r][c] == player and board[r+1][c+1] == 0 and board[r+2][c+2] == player) or
+                    (board[r][c] == 0 and board[r+1][c+1] == player and board[r+2][c+2] == player)
                 ):
-                    state_value += 1
+                    player_immediate_threats += 1
+                    state_value += 3.0
+                
+                # Opponent's immediate diagonal (\) winning move
+                if (
+                    (board[r][c] == opponent and board[r+1][c+1] == opponent and board[r+2][c+2] == 0) or
+                    (board[r][c] == opponent and board[r+1][c+1] == 0 and board[r+2][c+2] == opponent) or
+                    (board[r][c] == 0 and board[r+1][c+1] == opponent and board[r+2][c+2] == opponent)
+                ):
+                    opponent_immediate_threats += 1
+                    state_value += 2.5
+
+                # Two diagonal \ with open third (potential threats)
+                if (
+                    (board[r][c] == player and board[r + 1][c + 1] == player and board[r + 2][c + 2] == 0) or
+                    (board[r][c] == player and board[r + 1][c + 1] == 0 and board[r + 2][c + 2] == player) or
+                    (board[r][c] == 0 and board[r + 1][c + 1] == player and board[r + 2][c + 2] == player)
+                ):
+                    player_potential_threats += 1
+                    state_value += 1.0
 
                 # Opponent two diagonal \ with open third (defensive value)
                 if (
-                    (board[r][c] == opponent and board[r + 1][c + 1] == opponent and board[r + 2][c + 2] == 0)
-                    or (board[r][c] == opponent and board[r + 1][c + 1] == 0 and board[r + 2][c + 2] == opponent)
-                    or (board[r][c] == 0 and board[r + 1][c + 1] == opponent and board[r + 2][c + 2] == opponent)
+                    (board[r][c] == opponent and board[r + 1][c + 1] == opponent and board[r + 2][c + 2] == 0) or
+                    (board[r][c] == opponent and board[r + 1][c + 1] == 0 and board[r + 2][c + 2] == opponent) or
+                    (board[r][c] == 0 and board[r + 1][c + 1] == opponent and board[r + 2][c + 2] == opponent)
                 ):
+                    opponent_potential_threats += 1
                     state_value += 0.5
-
+        
+        # --- Fork detection (multiple threats) ---
+        
+        # If player has 2+ immediate threats, that's a fork (almost guaranteed win)
+        if player_immediate_threats >= 2:
+            state_value += 5.0  # Extremely valuable
+        
+        # If opponent has 2+ immediate threats, that's a defensive emergency
+        if opponent_immediate_threats >= 2:
+            state_value -= 1.0  # This is bad for us - can only block one
+        
+        # --- Strategic position evaluation ---
+        
+        # Center control (more nuanced than before)
+        # Bottom row center is most valuable
+        if board[2][2] == player:
+            state_value += 0.4  # Bottom center is prime real estate
+        
+        # Middle column control (refined)
+        center_control = sum(1 for r in range(3) if board[r][2] == player)
+        state_value += 0.3 * center_control
+        
         # Add value for center positions (usually strategically better)
         for r in range(3):
             for c in range(1, 4):  # middle 3 columns
                 if board[r][c] == player:
                     state_value += 0.2
-
-        # Add extra value for the middle column (most valuable position)
-        for r in range(3):
-            if board[r][2] == player:  # middle column (index 2)
-                state_value += 0.1
-
+        
+        # First-move advantage (if player is player 1)
+        if player == 1 and np.sum(board != 0) <= 2:
+            # In early game, player 1 should take center positions
+            state_value += 0.2 * sum(1 for r in range(3) for c in range(1, 4) if board[r][c] == player)
+        
         return state_value
 
     def _get_state(self):
