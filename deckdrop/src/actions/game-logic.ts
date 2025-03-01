@@ -15,13 +15,23 @@ export class GameLogic {
   private winChecker: WinChecker = new WinChecker();
   private aiOpponent: AIOpponent;
   private vsAI: boolean = true; // Play against AI by default
-  private aiDelay: number = 2000; // Delay in ms for AI moves
+  private aiDelay: number = 500; // Delay in ms for AI moves
+
+  private gameOverCallback?: () => void;
   
   constructor() {
     this.aiOpponent = new AIOpponent();
     this.resetGame();
   }
   
+  /**
+   * Set a callback function to handle game over state
+   * @param callback The function to call when the game is over
+   */
+  public setGameOverCallback(callback: () => void): void {
+    this.gameOverCallback = callback;
+  }
+
   public getBoard(): number[][] {
     return this.board;
   }
@@ -89,7 +99,7 @@ export class GameLogic {
       this.gameOver = true;
       return true;
     }
-    
+
     // Check for draw
     if (this.isBoardFull()) {
       streamDeck.logger.info('Game ended in a draw');
@@ -117,18 +127,19 @@ export class GameLogic {
     if (aiColumn >= 0 && aiColumn < 5) {
       streamDeck.logger.info(`AI is making move in column ${aiColumn}`);
       
-      // We'll use the onWin callback passed to this function
-      // This will be called in makeMove if there's a win
-      const onWinCallback = (positions: [number, number][], player: number) => {
-        this.onWinHandler?.(positions, player);
-      };
-      
-      // Make the move
-      const moveResult = this.makeMove(aiColumn, onWinCallback);
+      // Important: Use the stored onWinHandler directly 
+      // to ensure same callback for both players
+      const moveResult = this.makeMove(aiColumn, this.onWinHandler || (() => {}));
       
       // Ensure the board is rendered after AI makes a move
       if (this.renderCallback) {
         this.renderCallback(this.board);
+      }
+      
+      // If the game is now over, trigger the game over callback
+      if (moveResult && this.gameOver && this.gameOverCallback) {
+        streamDeck.logger.info("AI move ended the game, triggering game over callback");
+        this.gameOverCallback();
       }
     } else {
       streamDeck.logger.error(`AI returned invalid column: ${aiColumn}`);
@@ -159,8 +170,12 @@ export class GameLogic {
   
   /**
    * Reset the game
+   * @returns Promise that resolves when the reset is complete
    */
-  public resetGame(): void {
+  public async resetGame(): Promise<void> {
+    streamDeck.logger.info('Resetting game...');
+    
+    // Reset game state
     this.board = [
       [EMPTY, EMPTY, EMPTY, EMPTY, EMPTY], // Row 0
       [EMPTY, EMPTY, EMPTY, EMPTY, EMPTY], // Row 1
@@ -168,14 +183,31 @@ export class GameLogic {
     ];
     this.currentPlayer = PLAYER_ONE;
     this.gameOver = false;
-    streamDeck.logger.info('Game reset');
-
+    
+    // Force-render the board and ensure it completes before continuing
     if (this.renderCallback) {
-      this.renderCallback(this.board);
+      streamDeck.logger.info('Rendering reset board');
+      
+      // Store the callback in a local variable to satisfy TypeScript
+      const renderCallback = this.renderCallback;
+      
+      // Ensure the render completes by wrapping in a Promise
+      await new Promise<void>((resolve) => {
+        // Call the render callback (we know it exists since we captured it)
+        renderCallback(this.board);
+        
+        // Add a short delay to ensure rendering completes
+        setTimeout(() => {
+          resolve();
+        }, 100);
+      });
     }
     
-    // If AI is player 1, make AI move
+    streamDeck.logger.info('Game reset complete');
+    
+    // If AI is player 1, make AI move after ensuring board is rendered
     if (this.vsAI && !this.aiOpponent.isPlayerTwo) {
+      streamDeck.logger.info('Scheduling AI move after reset');
       setTimeout(() => this.makeAIMove(), this.aiDelay);
     }
   }
@@ -190,7 +222,7 @@ export class GameLogic {
           return false;
         }
       }
-    }
+    } 
     return true;
   }
 }

@@ -11,7 +11,6 @@ import { GameLogic } from "./game-logic";
 type GameSettings = {
   currentPlayer: number; 
   gameOver: boolean;
-  isController: boolean; // Flag to identify controller button
   vsAI: boolean; // Flag for AI mode
   aiIsPlayerTwo: boolean; // Flag for which player AI controls
 };
@@ -27,8 +26,8 @@ export class DeckDropGame extends SingletonAction<GameSettings> {
   // Map to store actions by coordinates
   private actionLookup: ActionMap = new Map();
   
-  // Controller action reference
-  private controllerAction: any = null;
+  // Flag to prevent multiple resets being triggered
+  private isResetting: boolean = false;
 
   constructor() {
     super();
@@ -39,7 +38,15 @@ export class DeckDropGame extends SingletonAction<GameSettings> {
     this.gameLogic.setOnWinHandler(this.renderer.showWinner.bind(this.renderer));
     
     // Set the render callback to ensure the board is rendered after AI moves
-    this.gameLogic.setRenderCallback(this.renderer.renderBoard.bind(this.renderer));
+    // Using an async wrapper to ensure renders complete properly
+    this.gameLogic.setRenderCallback(async (board) => {
+      await this.renderer.renderBoard(board);
+    });
+    
+    // Set the game over callback to handle reset logic
+    this.gameLogic.setGameOverCallback(() => {
+      this.scheduleGameReset();
+    });
   }
 
   private getCoordinateKey(row: number, col: number): CoordinateKey {
@@ -56,31 +63,6 @@ export class DeckDropGame extends SingletonAction<GameSettings> {
       coordinates: ev.action.coordinates,
       settings: ev.payload.settings
     });
-    
-    // Check if this is a controller button
-    if (ev.payload.settings?.isController) {
-      this.controllerAction = ev.action;
-      streamDeck.logger.info('Stored controller action');
-      
-      // Apply controller button settings
-      if (ev.payload.settings?.vsAI !== undefined) {
-        this.gameLogic.setVsAI(ev.payload.settings.vsAI);
-        streamDeck.logger.info(`AI mode set to: ${ev.payload.settings.vsAI}`);
-      }
-      
-      if (ev.payload.settings?.aiIsPlayerTwo !== undefined) {
-        this.gameLogic.setAIPlayer(ev.payload.settings.aiIsPlayerTwo);
-        streamDeck.logger.info(`AI is player two: ${ev.payload.settings.aiIsPlayerTwo}`);
-      }
-      
-      // Set controller button image based on mode
-      this.updateControllerImage(
-        ev.payload.settings?.vsAI ?? true,
-        ev.payload.settings?.aiIsPlayerTwo ?? true
-      );
-      
-      return;
-    }
     
     // Store action reference in our lookup map if it has coordinates
     if (ev.action.coordinates) {
@@ -113,13 +95,6 @@ export class DeckDropGame extends SingletonAction<GameSettings> {
   private hasProfileSwitched: boolean = false;
   
   override async onWillDisappear(ev: WillDisappearEvent<GameSettings>): Promise<void> {
-    // Check if this is the controller disappearing
-    if (ev.payload.settings?.isController && this.controllerAction?.id === ev.action.id) {
-      this.controllerAction = null;
-      streamDeck.logger.info('Controller action removed');
-      return;
-    }
-    
     // Find and remove the action from our lookup map
     for (const [key, storedAction] of this.actionLookup.entries()) {
       if (storedAction.id === ev.action.id) {
@@ -143,41 +118,41 @@ export class DeckDropGame extends SingletonAction<GameSettings> {
     if (ev.action.coordinates && ev.action.coordinates.row === 0) {
       const column = ev.action.coordinates.column;
       const moveResult = this.gameLogic.makeMove(column, this.renderer.showWinner.bind(this.renderer));
-      this.renderer.renderBoard(this.gameLogic.getBoard());
       
-      // If the game is over, schedule a reset
-      if (moveResult && this.gameLogic.isGameOver()) {
-        setTimeout(() => {
-          this.gameLogic.resetGame();
-          this.renderer.renderBoard(this.gameLogic.getBoard());
-        }, 5000); // Wait for animation to complete (5 seconds)
+      // Explicitly render the board after move
+      await this.renderer.renderBoard(this.gameLogic.getBoard());
+      
+      // If the move was successful, check if we need to reset
+      if (moveResult) {
+        this.scheduleGameReset();
       }
     } else {
       streamDeck.logger.info('Button not in top row, no action taken');
     }
   }
   
-  /**
-   * Update the controller button image based on game mode
-   */
-  private async updateControllerImage(vsAI: boolean, aiIsPlayerTwo: boolean): Promise<void> {
-    if (!this.controllerAction) return;
-    
-    let imagePath = '';
-    
-    if (!vsAI) {
-      imagePath = 'imgs/actions/deckdrop/controller-2player.svg';
-    } else if (aiIsPlayerTwo) {
-      imagePath = 'imgs/actions/deckdrop/controller-ai-p2.svg';
-    } else {
-      imagePath = 'imgs/actions/deckdrop/controller-ai-p1.svg';
-    }
-    
-    try {
-      await this.controllerAction.setImage(imagePath);
-      streamDeck.logger.info(`Set controller image to ${imagePath}`);
-    } catch (error) {
-      streamDeck.logger.error('Failed to set controller image:', error);
+  private scheduleGameReset(): void {
+    if (this.gameLogic.isGameOver() && !this.isResetting) {
+      this.isResetting = true; // Prevent multiple resets
+      
+      // Wait for animation to complete then reset
+      setTimeout(async () => {
+        streamDeck.logger.info("Resetting game after win/draw");
+        
+        try {
+          // Call the async resetGame method and wait for it to complete
+          await this.gameLogic.resetGame();
+          
+          // Force a re-render after reset to ensure UI is updated
+          await this.renderer.renderBoard(this.gameLogic.getBoard());
+          
+          streamDeck.logger.info("Game reset and board re-rendered");
+        } catch (error) {
+          streamDeck.logger.error("Error during game reset:", error);
+        } finally {
+          this.isResetting = false; // Reset flag
+        }
+      }, 7500); // Extended to 7.5 seconds to ensure animations complete fully
     }
   }
 }

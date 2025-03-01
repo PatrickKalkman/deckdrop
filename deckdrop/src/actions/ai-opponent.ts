@@ -1,31 +1,16 @@
 import streamDeck from "@elgato/streamdeck";
 import { EMPTY, PLAYER_ONE, PLAYER_TWO } from "./game-renderer";
+import { qTableData } from "./q-table";
 
 export class AIOpponent {
   private qTable: Record<string, Record<string, number>>;
-  private isPlayerTwo: boolean = true; // AI is player 2 by default
+  public isPlayerTwo: boolean = true; // AI is player 2 by default
   
   constructor() {
-    this.qTable = {};
-    this.loadQTable();
-  }
-  
-  /**
-   * Load the Q-table from the saved JSON file
-   */
-  private async loadQTable(): Promise<void> {
-    try {
-      // Adjust the path to where your qtable JSON is stored
-      const response = await fetch('./data/qtable_final.json');
-      const data = await response.json();
-      // Add type assertion to ensure the data matches our expected structure
-      this.qTable = data as Record<string, Record<string, number>>;
-      streamDeck.logger.info('Q-table loaded successfully');
-    } catch (error) {
-      streamDeck.logger.error('Failed to load Q-table:', error);
-      // Initialize with empty Q-table if loading fails
-      this.qTable = {};
-    }
+    this.qTable = qTableData;
+
+    streamDeck.logger.info(`Loaded Q-table with ${Object.keys(this.qTable).length} states`);
+
   }
   
   /**

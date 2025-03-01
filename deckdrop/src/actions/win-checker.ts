@@ -13,7 +13,7 @@ export class WinChecker {
       this.checkDiagonalUpWin(board, player, showWinnerCallback)
     );
   }
-
+ 
   /**
    * Check for horizontal win (row-based)
    */
