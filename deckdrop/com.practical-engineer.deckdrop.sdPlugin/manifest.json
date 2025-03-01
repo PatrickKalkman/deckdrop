@@ -2,6 +2,7 @@
 	"Name": "deckdrop",
 	"Version": "0.1.0.0",
 	"Author": "Patrick Kalkman",
+	"PropertyInspectorPath": "ui/deckdrop.html",
 	"Actions": [
 		{
 			"UUID": "com.practical-engineer.deckdrop.game",

@@ -3,7 +3,8 @@ import streamDeck, {
   KeyDownEvent, 
   SingletonAction, 
   WillAppearEvent,
-  WillDisappearEvent
+  WillDisappearEvent,
+  DidReceiveSettingsEvent
 } from "@elgato/streamdeck";
 import { GameRenderer, EMPTY_SLOT_IMAGE } from "./game-renderer";
 import { GameLogic } from "./game-logic";
@@ -13,6 +14,7 @@ type GameSettings = {
   gameOver: boolean;
   vsAI: boolean; // Flag for AI mode
   aiIsPlayerTwo: boolean; // Flag for which player AI controls
+  player?: string;
 };
 
 type CoordinateKey = string;
@@ -155,4 +157,26 @@ export class DeckDropGame extends SingletonAction<GameSettings> {
       }, 7500); // Extended to 7.5 seconds to ensure animations complete fully
     }
   }
+
+  override async onDidReceiveSettings(
+    ev: DidReceiveSettingsEvent<GameSettings>
+  ): Promise<void> {
+    streamDeck.logger.info('Received settings:', ev.payload.settings);
+    
+    // Handle the player selection setting
+    if (ev.payload.settings?.player) {
+      const playerChoice = ev.payload.settings.player;
+      streamDeck.logger.info(`Player selection changed to: ${playerChoice}`);
+      
+      // Update AI player based on user's selection
+      const aiIsPlayerTwo = playerChoice === 'player1';
+      this.gameLogic.setAIPlayer(aiIsPlayerTwo);
+      
+      // Reset the game for a fresh start with the new settings
+      if (!this.isResetting) {
+        await this.gameLogic.resetGame();
+        await this.renderer.renderBoard(this.gameLogic.getBoard());
+      }
+    }
+  }  
 }

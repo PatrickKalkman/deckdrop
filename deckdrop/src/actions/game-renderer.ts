@@ -52,7 +52,7 @@ export class GameRenderer {
     const playerImage = player === PLAYER_ONE ? YELLOW_TOKEN_IMAGE : RED_TOKEN_IMAGE;
     
     // Blink 5 times
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < 3; i++) {
       // Set to empty
       for (const [row, col] of positions) {
         await this.setButtonImage(row, col, EMPTY_SLOT_IMAGE);
@@ -160,7 +160,6 @@ export class GameRenderer {
     
     // Wait for all image setting operations to complete
     await Promise.all(imagePromises);
-    
     streamDeck.logger.info('Board rendering complete');
   }
 

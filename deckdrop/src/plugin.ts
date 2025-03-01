@@ -9,7 +9,7 @@ streamDeck.logger.setLevel(LogLevel.INFO);
 streamDeck.actions.registerAction(new DeckDropGame());
 
 // Finally, connect to the Stream Deck.
-streamDeck.connect();
+streamDeck.connect(); 
 
 // Register your actions here
 export const actions = [

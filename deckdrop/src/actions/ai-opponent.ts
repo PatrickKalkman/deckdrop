@@ -8,9 +8,7 @@ export class AIOpponent {
   
   constructor() {
     this.qTable = qTableData;
-
     streamDeck.logger.info(`Loaded Q-table with ${Object.keys(this.qTable).length} states`);
-
   }
   
   /**

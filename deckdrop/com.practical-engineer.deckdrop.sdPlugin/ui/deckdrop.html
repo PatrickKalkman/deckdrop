@@ -1,0 +1,23 @@
+<!doctype html>
+<html>
+  <head lang="en">
+    <meta charset="utf-8" />
+    <script src="https://sdpi-components.dev/releases/v3/sdpi-components.js"></script>
+  </head>
+  <body>
+    <sdpi-item label="Player Selection">
+      <sdpi-select setting="player" placeholder="Choose your player">
+        <option value="player1">Player One</option>
+        <option value="player2">Player Two</option>
+      </sdpi-select>
+    </sdpi-item>
+    <script>
+      const { streamDeckClient } = SDPIComponents;
+      document.querySelector('sdpi-select[setting="player"]').addEventListener('change', (e) => {
+        streamDeckClient.setSettings({
+          player: e.target.value
+        });
+      });
+    </script>
+  </body>
+</html>
