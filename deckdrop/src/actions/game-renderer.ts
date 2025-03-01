@@ -4,6 +4,8 @@ import streamDeck from "@elgato/streamdeck";
 export const EMPTY_SLOT_IMAGE = "imgs/actions/deckdrop/empty-slot.svg";
 export const YELLOW_TOKEN_IMAGE = "imgs/actions/deckdrop/yellow-token-in-slot.svg";
 export const RED_TOKEN_IMAGE = "imgs/actions/deckdrop/red-token-in-slot.svg";
+export const YELLOW_TOKEN_SOLO_IMAGE = "imgs/actions/deckdrop/yellow-token.svg";
+export const RED_TOKEN_SOLO_IMAGE = "imgs/actions/deckdrop/red-token.svg";
 
 // Board states
 export const EMPTY = 0;
@@ -79,7 +81,7 @@ export class GameRenderer {
    * @param player The winning player
    */
   private async fillBoardWithWinnerPattern(player: number): Promise<void> {
-    const playerImage = player === PLAYER_ONE ? YELLOW_TOKEN_IMAGE : RED_TOKEN_IMAGE;
+    const playerImage = player === PLAYER_ONE ? YELLOW_TOKEN_SOLO_IMAGE : RED_TOKEN_SOLO_IMAGE;
     
     streamDeck.logger.info(`Starting diagonal fill animation for player ${player}`);
     

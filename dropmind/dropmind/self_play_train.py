@@ -23,19 +23,7 @@ def self_play_train(
     render_interval=0,
 ):
     """
-    Train the Q-learning agent using self-play.
-
-    Args:
-        episodes: Number of episodes to train
-        save_interval: Save model every X episodes
-        learning_rate: Alpha - learning rate for Q-value updates
-        discount_factor: Gamma - discount factor for future rewards
-        exploration_rate: Initial exploration rate (epsilon)
-        exploration_decay: Rate at which exploration decreases
-        min_exploration_rate: Minimum exploration rate
-        opponent_update_interval: Update opponent agent every X episodes
-        save_json: Whether to also save in JSON format for TypeScript
-        render_interval: If > 0, render the game every X episodes
+    Train the Q-learning agent using self-play with alternating player roles.
     """
     # Create output directories
     os.makedirs("./dropmind/models", exist_ok=True)
@@ -64,17 +52,20 @@ def self_play_train(
     q_table_sizes = []
     exploration_rates = []
     elo_ratings = [1000]  # Starting ELO rating
-    
-    # Training the agent as player 2
 
     start_time = time.time()
 
     # Training loop
     for episode in tqdm(range(episodes)):
         state = env.reset()
-        is_primary_turn = False  # Primary agent is player 2, opponent starts as player 1
+
+        # Alternate which player the primary agent plays as
+        primary_agent_player = (episode % 2) + 1  # 1 for odd episodes, 2 for even
+        is_primary_turn = env.current_player == primary_agent_player
+
         total_reward = 0
         game_steps = 0
+        actions_taken = []  # Store actions for analysis
 
         # Play an episode
         while not env.done:
@@ -87,8 +78,11 @@ def self_play_train(
             # Choose an action based on which agent's turn it is
             if is_primary_turn:  # Primary agent's turn
                 action = primary_agent.get_action(state, valid_actions)
+                actions_taken.append(action)
             else:  # Opponent agent's turn
-                opp_state = _convert_state_for_opponent(state)
+                opp_state = state
+                if primary_agent_player == 1:  # Primary is player 1, convert for player 2
+                    opp_state = _convert_state_for_opponent(state)
                 action = opponent_agent.get_action(opp_state, valid_actions)
 
             # Take the action
@@ -99,40 +93,42 @@ def self_play_train(
             if not done:
                 next_valid_actions = env.get_valid_actions()
 
-            # Calculate reward for the primary agent (player 2)
-            # If it's player 1's turn now, we need to invert the reward
-            primary_reward = reward if is_primary_turn else -reward
-
-            # Update Q-values for primary agent
+            # Update Q-values for primary agent based on its perspective
             if is_primary_turn:
-                primary_agent.update(state, action, primary_reward, next_state, next_valid_actions)
+                primary_agent.update(state, action, reward, next_state, next_valid_actions)
             else:
-                # For opponent's move, we update primary agent with the perspective
-                # of what it would have observed as player 2
-                opp_state = _convert_state_for_opponent(state)
-                opp_next_state = _convert_state_for_opponent(next_state)
-                primary_agent.update(opp_state, action, primary_reward, opp_next_state, next_valid_actions)
+                # For opponent's move, we update primary agent with inverted reward
+                if primary_agent_player == 1:  # Primary is player 1
+                    opp_state = _convert_state_for_opponent(state)
+                    opp_next_state = _convert_state_for_opponent(next_state)
+                    primary_agent.update(opp_state, action, -reward, opp_next_state, next_valid_actions)
+                else:  # Primary is player 2
+                    primary_agent.update(state, action, -reward, next_state, next_valid_actions)
 
             state = next_state
-            total_reward += primary_reward
+            total_reward += reward if is_primary_turn else -reward
             game_steps += 1
-            is_primary_turn = not is_primary_turn  # Switch turns
+            is_primary_turn = env.current_player == primary_agent_player  # Update turn
 
             # Render game if requested
             if render_interval > 0 and episode % render_interval == 0:
                 os.system("clear" if os.name == "posix" else "cls")
                 print(f"Episode: {episode + 1}/{episodes}")
                 print(f"Step: {game_steps}, Player: {env.current_player}")
-                print(f"Agent: {'Primary' if is_primary_turn else 'Opponent'}")
+                print(f"Primary agent is Player {primary_agent_player}")
+                print(f"Current turn: {'Primary' if is_primary_turn else 'Opponent'}")
                 env.render()
-                time.sleep(0.5)  # Pause to make rendering visible
+                time.sleep(0.5)
 
-        # Record game result
-        if env.winner == 2:  # Primary agent won (now player 2)
+        # Record game result based on primary agent's player number
+        primary_agent_won = env.winner == primary_agent_player
+        opponent_agent_won = env.winner is not None and env.winner != primary_agent_player
+
+        if primary_agent_won:
             primary_wins.append(1)
             opponent_wins.append(0)
             draws.append(0)
-        elif env.winner == 1:  # Opponent agent won (now player 1)
+        elif opponent_agent_won:
             primary_wins.append(0)
             opponent_wins.append(1)
             draws.append(0)
@@ -146,7 +142,7 @@ def self_play_train(
             elo_ratings.append(
                 _update_elo(
                     elo_ratings[-1],
-                    env.winner == 2,  # True if primary agent won (now player 2)
+                    primary_agent_won,
                     k_factor=32,
                 )
             )
@@ -209,7 +205,7 @@ def _convert_state_for_opponent(state):
 
     In Connect Three, we need to swap the player numbers (1 and 2)
     to allow the agent to learn from both perspectives.
-    
+
     Since the primary agent is now player 2, this function is used
     to convert states for the opponent (player 1).
     """
