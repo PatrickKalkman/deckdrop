@@ -1,7 +1,7 @@
 import json
 
 # Load the JSON file
-with open("dropmind/models/improved_qtable_final.json", "r") as f:
+with open("dropmind/models/qtable_final.json", "r") as f:
     qtable = json.load(f)
 
 # Create a TypeScript file
