@@ -197,40 +197,57 @@ export class DeckDropGame extends SingletonAction<GameSettings> {
         } catch (error) {
           streamDeck.logger.error("Error during game reset:", error);
         } finally {
-          this.isResetting = false; // Reset flag
+          this.isResetting = false;
         }
-      }, 7500); // Extended to 7.5 seconds to ensure animations complete fully
+      }, 7500);
     }
   }
 
   override async onDidReceiveSettings(
     ev: DidReceiveSettingsEvent<GameSettings>
   ): Promise<void> {
-    streamDeck.logger.info('Received settings:', ev.payload.settings);
-    
-    // Handle the player selection setting
-    if (ev.payload.settings?.player) {
-      const playerChoice = ev.payload.settings.player;
-      streamDeck.logger.info(`Player selection changed to: ${playerChoice}`);
+    try {
+      streamDeck.logger.info('Received settings:', ev.payload.settings);
+      const settings = ev.payload.settings;
+      let needsReset = false;
       
-      // Update AI player based on user's selection
-      const aiIsPlayerTwo = playerChoice === 'player1';
-      this.gameLogic.setAIPlayer(aiIsPlayerTwo);
-    }
-    
-    // Handle AI strategy selection
-    if (ev.payload.settings?.aiStrategy) {
-      const strategy = ev.payload.settings.aiStrategy;
-      const simulations = ev.payload.settings.mctsSimulations || 5000;
+      // Handle the player selection setting
+      if (settings?.player) {
+        const playerChoice = settings.player;
+        streamDeck.logger.info(`Player selection changed to: ${playerChoice}`);
+        
+        // Update AI player based on user's selection
+        const aiIsPlayerTwo = playerChoice === 'player1';
+        this.gameLogic.setAIPlayer(aiIsPlayerTwo);
+        needsReset = true;
+      }
       
-      streamDeck.logger.info(`AI strategy changed to: ${strategy}`);
-      this.gameLogic.setAIStrategy(strategy, simulations);
+      // Handle AI strategy and simulation count
+      let strategyChanged = false;
+      if (settings?.aiStrategy) {
+        const strategy = settings.aiStrategy;
+        streamDeck.logger.info(`AI strategy changed to: ${strategy}`);
+        strategyChanged = true;
+        needsReset = true;
+      }
+      
+      // Check for simulation count changes, either directly or as part of strategy change
+      if (settings?.mctsSimulations || strategyChanged) {
+        const simulations = settings?.mctsSimulations || 500; // Match HTML default
+        const strategy = settings?.aiStrategy || 'mcts'; // Default if not specified
+        
+        streamDeck.logger.info(`MCTS simulations set to: ${simulations}`);
+        this.gameLogic.setAIStrategy(strategy, simulations);
+        needsReset = true;
+      }
+      
+      // Reset the game for a fresh start with the new settings if any relevant changes occurred
+      if (needsReset && !this.isResetting) {
+        await this.gameLogic.resetGame();
+        await this.renderer.renderBoard(this.gameLogic.getBoard());
+      }
+    } catch (error) {
+      streamDeck.logger.error(`Error handling settings: ${error}`);
     }
-    
-    // Reset the game for a fresh start with the new settings
-    if (!this.isResetting) {
-      await this.gameLogic.resetGame();
-      await this.renderer.renderBoard(this.gameLogic.getBoard());
-    }
-  }  
+  }
 }
