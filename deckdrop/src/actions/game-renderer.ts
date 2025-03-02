@@ -98,7 +98,7 @@ export class GameRenderer {
       [[0,4], [1,3], [2,2]], // Fifth diagonal
       [[1,4], [2,3]], // Sixth diagonal
       [[2,4]] // Last diagonal (bottom-right corner)
-    ];
+    ]; 
     
     // Fill each diagonal with a slight delay between them
     for (const diagonal of diagonals) {
