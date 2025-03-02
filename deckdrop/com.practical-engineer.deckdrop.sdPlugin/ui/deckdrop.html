@@ -82,10 +82,12 @@
           if (settings.player) {
             document.querySelector('sdpi-select[setting="player"]').value = settings.player;
           }
-          if (settings.aiStrategy) {
-            document.querySelector('sdpi-select[setting="aiStrategy"]').value = settings.aiStrategy;
-            toggleDifficultyVisibility();
-          }
+          
+          // Set default AI strategy to MCTS if not specified
+          const aiStrategySelect = document.querySelector('sdpi-select[setting="aiStrategy"]');
+          aiStrategySelect.value = settings.aiStrategy || 'mcts';
+          toggleDifficultyVisibility();
+          
           if (settings.mctsSimulations) {
             const simulationsSelect = document.querySelector('sdpi-select[setting="mctsSimulations"]');
             // Find closest option or add a custom one
