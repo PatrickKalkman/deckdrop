@@ -1,7 +1,7 @@
 import streamDeck from "@elgato/streamdeck";
 import { EMPTY, PLAYER_ONE, PLAYER_TWO } from "./game-renderer";
 import { qTableData } from "./q-table";
-import { MCTSOpponent } from "./mcts-opponent";
+import { MCTSOpponent, DEFAULT_MCTS_SIMULATIONS } from "./mcts-opponent";
 
 // Define an interface for AI strategies
 interface AIStrategy {
@@ -138,7 +138,7 @@ export class AIOpponent {
   private strategy: AIStrategy;
   public isPlayerTwo: boolean = true; // AI is player 2 by default
   
-  constructor(strategyType: 'qlearning' | 'mcts' = 'mcts', mctsSimulations: number = 5000) {
+  constructor(strategyType: 'qlearning' | 'mcts' = 'mcts', mctsSimulations: number = DEFAULT_MCTS_SIMULATIONS) {
     // Create the appropriate strategy
     if (strategyType === 'mcts') {
       this.strategy = new MCTSStrategy(mctsSimulations);
@@ -172,7 +172,7 @@ export class AIOpponent {
    * @param strategyType The type of strategy to use ('qlearning' or 'mcts')
    * @param mctsSimulations Number of simulations for MCTS (only used if strategy is 'mcts')
    */
-  public setStrategy(strategyType: 'qlearning' | 'mcts', mctsSimulations: number = 5000): void {
+  public setStrategy(strategyType: 'qlearning' | 'mcts', mctsSimulations: number = DEFAULT_MCTS_SIMULATIONS): void {
     if (strategyType === 'mcts') {
       this.strategy = new MCTSStrategy(mctsSimulations);
     } else {

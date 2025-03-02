@@ -1,6 +1,9 @@
 import streamDeck from "@elgato/streamdeck";
 import { EMPTY, PLAYER_ONE, PLAYER_TWO } from "./game-renderer";
 
+// Default number of MCTS simulations to run
+export const DEFAULT_MCTS_SIMULATIONS = 10000;
+
 // MCTSNode represents a state in the game
 class MCTSNode {
   state: number[][];
@@ -158,10 +161,10 @@ class MCTSNode {
 
 export class MCTSOpponent {
   public isPlayerTwo: boolean = true; // AI is player 2 by default
-  private simulationCount: number = 10000; // Increased simulation count
+  private simulationCount: number = DEFAULT_MCTS_SIMULATIONS;
   private explorationConstant: number = 1.2; // Slightly reduced to favor exploitation
 
-  constructor(simulationCount: number = 10000) {
+  constructor(simulationCount: number = DEFAULT_MCTS_SIMULATIONS) {
     this.simulationCount = simulationCount;
     streamDeck.logger.info(`Created MCTS opponent with ${simulationCount} simulations`);
   } 

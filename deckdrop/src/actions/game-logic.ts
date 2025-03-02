@@ -2,6 +2,7 @@ import { WinChecker } from "./win-checker";
 import { EMPTY, PLAYER_ONE, PLAYER_TWO } from "./game-renderer";
 import streamDeck from "@elgato/streamdeck";
 import { AIOpponent } from "./ai-opponent";
+import { DEFAULT_MCTS_SIMULATIONS } from "./mcts-opponent";
 
 export class GameLogic {
   // Game board (3 rows × 5 columns)
@@ -19,7 +20,7 @@ export class GameLogic {
 
   private gameOverCallback?: () => void;
   
-  constructor(strategyType: 'qlearning' | 'mcts' = 'mcts', mctsSimulations: number = 10000) {
+  constructor(strategyType: 'qlearning' | 'mcts' = 'mcts', mctsSimulations: number = DEFAULT_MCTS_SIMULATIONS) {
     // Create the AI opponent with the specified strategy, defaulting to MCTS with 10,000 simulations
     this.aiOpponent = new AIOpponent(strategyType, mctsSimulations);
     streamDeck.logger.info(`Created AI Opponent with ${strategyType} strategy`);
@@ -30,7 +31,7 @@ export class GameLogic {
    * @param strategy The strategy to use ('qlearning' or 'mcts')
    * @param mctsSimulations Number of simulations for MCTS
    */
-  public setAIStrategy(strategy: 'qlearning' | 'mcts', mctsSimulations: number = 10000): void {
+  public setAIStrategy(strategy: 'qlearning' | 'mcts', mctsSimulations: number = DEFAULT_MCTS_SIMULATIONS): void {
     // Update the AI opponent's strategy
     this.aiOpponent.setStrategy(strategy, mctsSimulations);
     
