@@ -119,21 +119,64 @@ export class DeckDropGame extends SingletonAction<GameSettings> {
       settings: ev.payload.settings
     });
 
-    // Check if the pressed button is in the top row (row=0)
-    if (ev.action.coordinates && ev.action.coordinates.row === 0) {
-      const column = ev.action.coordinates.column;
-      const moveResult = this.gameLogic.makeMove(column, this.renderer.showWinner.bind(this.renderer));
+    // If a button in any row is pressed, show checkmarks on all valid move locations (top row)
+    if (ev.action.coordinates) {
+      streamDeck.logger.info('Button pressed, showing valid move indicators');
       
-      // Explicitly render the board after move
-      await this.renderer.renderBoard(this.gameLogic.getBoard());
+      // Show checkmarks on all buttons in the top row that represent valid moves
+      await this.showValidMoveIndicators();
       
-      // If the move was successful, check if we need to reset
-      if (moveResult) {
-        this.scheduleGameReset();
+      // If the pressed button is in the top row, also make the move
+      if (ev.action.coordinates.row === 0) {
+        const column = ev.action.coordinates.column;
+        const moveResult = this.gameLogic.makeMove(column, this.renderer.showWinner.bind(this.renderer));
+        
+        // Explicitly render the board after move
+        await this.renderer.renderBoard(this.gameLogic.getBoard());
+        
+        // If the move was successful, check if we need to reset
+        if (moveResult) {
+          this.scheduleGameReset();
+        }
       }
     } else {
-      streamDeck.logger.info('Button not in top row, no action taken');
+      streamDeck.logger.info('Button has no coordinates, no action taken');
     }
+  }
+  
+  /**
+   * Shows checkmark indicators on all valid move locations (empty slots in top row)
+   */
+  private async showValidMoveIndicators(): Promise<void> {
+    const board = this.gameLogic.getBoard();
+    
+    // Show checkmarks on all empty slots in the top row
+    for (let col = 0; col < 5; col++) {
+      // Get the action for this column in the top row
+      const key = this.getCoordinateKey(0, col);
+      const action = this.actionLookup.get(key);
+      
+      if (action) {
+        // Only show checkmark if this column isn't full (top slot is empty)
+        if (board[0][col] === 0) { // 0 is EMPTY
+          await action.showOk(true); // true shows a checkmark
+        }
+      }
+    }
+    
+    // Clear the indicators after a short delay
+    setTimeout(async () => {
+      for (let col = 0; col < 5; col++) {
+        const key = this.getCoordinateKey(0, col);
+        const action = this.actionLookup.get(key);
+        if (action) {
+          // The showOk effect is temporary, but we can explicitly clear it
+          // by setting the image back to what it should be
+          const cellValue = board[0][col];
+          await this.renderer.setButtonImage(0, col, this.renderer.getImageForCell(cellValue));
+        }
+      }
+    }, 1000); // Clear after 1 second
   }
   
   private scheduleGameReset(): void {

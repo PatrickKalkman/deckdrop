@@ -215,4 +215,22 @@ export class GameRenderer {
   private getCoordinateKey(row: number, col: number): string {
     return `${row},${col}`;
   }
+  
+  /**
+   * Get the appropriate image for a cell based on its value
+   * @param cellValue The value of the cell (EMPTY, PLAYER_ONE, or PLAYER_TWO)
+   * @returns The path to the image for this cell
+   */
+  public getImageForCell(cellValue: number): string {
+    switch (cellValue) {
+      case EMPTY:
+        return EMPTY_SLOT_IMAGE;
+      case PLAYER_ONE:
+        return YELLOW_TOKEN_IMAGE;
+      case PLAYER_TWO:
+        return RED_TOKEN_IMAGE;
+      default:
+        return EMPTY_SLOT_IMAGE;
+    }
+  }
 }
