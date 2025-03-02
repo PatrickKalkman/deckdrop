@@ -1,21 +1,24 @@
 import streamDeck from "@elgato/streamdeck";
 import { EMPTY, PLAYER_ONE, PLAYER_TWO } from "./game-renderer";
 import { qTableData } from "./q-table";
+import { MCTSOpponent } from "./mcts-opponent";
 
-export class AIOpponent {
+// Define an interface for AI strategies
+interface AIStrategy {
+  getBestMove(board: number[][]): number;
+  setIsPlayerTwo(isPlayerTwo: boolean): void;
+}
+
+// QLearningStrategy implements the existing Q-learning approach
+class QLearningStrategy implements AIStrategy {
   private qTable: Record<string, Record<string, number>>;
-  public isPlayerTwo: boolean = true; // AI is player 2 by default
+  public isPlayerTwo: boolean = true;
   
   constructor() {
     this.qTable = qTableData;
     streamDeck.logger.info(`Loaded Q-table with ${Object.keys(this.qTable).length} states`);
   }
   
-  /**
-   * Get the best action (column) for the current board state
-   * @param board Current game board
-   * @returns Column index (0-4) for the best move
-   */
   public getBestMove(board: number[][]): number {
     // Convert board to state representation
     const state = this.boardToState(board);
@@ -73,11 +76,11 @@ export class AIOpponent {
     return bestAction;
   }
   
-  /**
-   * Convert the game board to a state string representation
-   * @param board The current game board
-   * @returns State string
-   */
+  public setIsPlayerTwo(isPlayerTwo: boolean): void {
+    this.isPlayerTwo = isPlayerTwo;
+  }
+  
+  // Helper methods
   private boardToState(board: number[][]): string {
     // If AI is player 2, we don't need to flip the perspective
     if (this.isPlayerTwo) {
@@ -96,11 +99,6 @@ export class AIOpponent {
     return flippedBoard.flat().join('');
   }
   
-  /**
-   * Get list of valid actions (columns that aren't full)
-   * @param board Current game board
-   * @returns Array of valid column indices
-   */
   private getValidActions(board: number[][]): number[] {
     const validActions: number[] = [];
     
@@ -113,6 +111,52 @@ export class AIOpponent {
     
     return validActions;
   }
+}
+
+// MCTSStrategy is just a wrapper for our MCTSOpponent
+class MCTSStrategy implements AIStrategy {
+  private mctsOpponent: MCTSOpponent;
+  
+  constructor(simulationCount: number = 5000) {
+    this.mctsOpponent = new MCTSOpponent(simulationCount);
+  }
+  
+  public getBestMove(board: number[][]): number {
+    return this.mctsOpponent.getBestMove(board);
+  }
+  
+  public setIsPlayerTwo(isPlayerTwo: boolean): void {
+    this.mctsOpponent.setIsPlayerTwo(isPlayerTwo);
+  }
+  
+  public setSimulationCount(count: number): void {
+    this.mctsOpponent.setSimulationCount(count);
+  }
+}
+
+export class AIOpponent {
+  private strategy: AIStrategy;
+  public isPlayerTwo: boolean = true; // AI is player 2 by default
+  
+  constructor(strategyType: 'qlearning' | 'mcts' = 'mcts', mctsSimulations: number = 5000) {
+    // Create the appropriate strategy
+    if (strategyType === 'mcts') {
+      this.strategy = new MCTSStrategy(mctsSimulations);
+    } else {
+      this.strategy = new QLearningStrategy();
+    }
+    
+    streamDeck.logger.info(`Created AI Opponent with ${strategyType} strategy`);
+  }
+  
+  /**
+   * Get the best action (column) for the current board state
+   * @param board Current game board
+   * @returns Column index (0-4) for the best move
+   */
+  public getBestMove(board: number[][]): number {
+    return this.strategy.getBestMove(board);
+  }
   
   /**
    * Set which player the AI plays as
@@ -120,5 +164,24 @@ export class AIOpponent {
    */
   public setIsPlayerTwo(isPlayerTwo: boolean): void {
     this.isPlayerTwo = isPlayerTwo;
+    this.strategy.setIsPlayerTwo(isPlayerTwo);
+  }
+  
+  /**
+   * Change the AI strategy
+   * @param strategyType The type of strategy to use ('qlearning' or 'mcts')
+   * @param mctsSimulations Number of simulations for MCTS (only used if strategy is 'mcts')
+   */
+  public setStrategy(strategyType: 'qlearning' | 'mcts', mctsSimulations: number = 5000): void {
+    if (strategyType === 'mcts') {
+      this.strategy = new MCTSStrategy(mctsSimulations);
+    } else {
+      this.strategy = new QLearningStrategy();
+    }
+    
+    // Make sure to set the player correctly
+    this.strategy.setIsPlayerTwo(this.isPlayerTwo);
+    
+    streamDeck.logger.info(`Switched to ${strategyType} strategy`);
   }
 }

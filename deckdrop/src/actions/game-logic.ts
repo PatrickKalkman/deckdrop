@@ -13,15 +13,29 @@ export class GameLogic {
   private currentPlayer: number = PLAYER_ONE;
   private gameOver: boolean = false;
   private winChecker: WinChecker = new WinChecker();
-  private aiOpponent: AIOpponent;
+  private aiOpponent: AIOpponent; // Initialize in constructor
   private vsAI: boolean = true; // Play against AI by default
   private aiDelay: number = 500; // Delay in ms for AI moves
 
   private gameOverCallback?: () => void;
   
-  constructor() {
-    this.aiOpponent = new AIOpponent();
-    this.resetGame();
+  constructor(strategyType: 'qlearning' | 'mcts' = 'mcts', mctsSimulations: number = 10000) {
+    // Create the AI opponent with the specified strategy, defaulting to MCTS with 10,000 simulations
+    this.aiOpponent = new AIOpponent(strategyType, mctsSimulations);
+    streamDeck.logger.info(`Created AI Opponent with ${strategyType} strategy`);
+  }
+
+  /**
+   * Set the AI strategy to use
+   * @param strategy The strategy to use ('qlearning' or 'mcts')
+   * @param mctsSimulations Number of simulations for MCTS
+   */
+  public setAIStrategy(strategy: 'qlearning' | 'mcts', mctsSimulations: number = 10000): void {
+    // Update the AI opponent's strategy
+    this.aiOpponent.setStrategy(strategy, mctsSimulations);
+    
+    streamDeck.logger.info(`Set AI strategy to ${strategy}` + 
+      (strategy === 'mcts' ? ` with ${mctsSimulations} simulations` : ''));
   }
   
   /**
