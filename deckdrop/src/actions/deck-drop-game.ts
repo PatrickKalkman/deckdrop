@@ -119,14 +119,9 @@ export class DeckDropGame extends SingletonAction<GameSettings> {
       settings: ev.payload.settings
     });
 
-    // If a button in any row is pressed, show checkmarks on all valid move locations (top row)
+    // Only proceed if we have coordinates
     if (ev.action.coordinates) {
-      streamDeck.logger.info('Button pressed, showing valid move indicators');
-      
-      // Show checkmarks on all buttons in the top row that represent valid moves
-      await this.showValidMoveIndicators();
-      
-      // If the pressed button is in the top row, also make the move
+      // If the pressed button is in the top row, make the move
       if (ev.action.coordinates.row === 0) {
         const column = ev.action.coordinates.column;
         const moveResult = this.gameLogic.makeMove(column, this.renderer.showWinner.bind(this.renderer));
@@ -138,6 +133,10 @@ export class DeckDropGame extends SingletonAction<GameSettings> {
         if (moveResult) {
           this.scheduleGameReset();
         }
+      } else {
+        // Button is in a lower row, show valid move indicators
+        streamDeck.logger.info('Button in lower row pressed, showing valid move indicators');
+        await this.showValidMoveIndicators();
       }
     } else {
       streamDeck.logger.info('Button has no coordinates, no action taken');
