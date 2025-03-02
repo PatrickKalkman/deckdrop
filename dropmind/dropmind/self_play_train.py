@@ -14,9 +14,9 @@ def self_play_train(
     episodes=10000,
     save_interval=1000,
     learning_rate=0.1,
-    discount_factor=0.9,
+    discount_factor=0.95,
     exploration_rate=1.0,
-    exploration_decay=0.995,
+    exploration_decay=0.998,
     min_exploration_rate=0.01,
     opponent_update_interval=500,
     save_json=True,
@@ -199,6 +199,189 @@ def self_play_train(
     return primary_agent, rewards, primary_wins, opponent_wins, draws, elo_ratings
 
 
+def player1_only_train(
+    episodes=10000,
+    save_interval=1000,
+    learning_rate=0.1,
+    discount_factor=0.95,
+    exploration_rate=1.0,
+    exploration_decay=0.998,
+    min_exploration_rate=0.01,
+    opponent_update_interval=500,
+    save_json=True,
+    render_interval=0,
+):
+    """
+    Train the Q-learning agent to play only as player 1.
+    """
+    # Create output directories
+    os.makedirs("./dropmind/models", exist_ok=True)
+    os.makedirs("./dropmind/graphs", exist_ok=True)
+
+    # Initialize environment and agents
+    env = ConnectThreeEnv()
+
+    # Primary agent (learns as player 1)
+    primary_agent = QLearningAgent(
+        learning_rate=learning_rate,
+        discount_factor=discount_factor,
+        exploration_rate=exploration_rate,
+        exploration_decay=exploration_decay,
+        min_exploration_rate=min_exploration_rate,
+    )
+
+    # Opponent agent (updated periodically from primary agent)
+    opponent_agent = copy.deepcopy(primary_agent)
+
+    # Metrics
+    primary_wins = []
+    opponent_wins = []
+    draws = []
+    rewards = []
+    q_table_sizes = []
+    exploration_rates = []
+    elo_ratings = [1000]  # Starting ELO rating
+
+    start_time = time.time()
+
+    # Training loop
+    for episode in tqdm(range(episodes)):
+        state = env.reset()
+
+        # Primary agent always plays as player 1
+        primary_agent_player = 1
+        is_primary_turn = env.current_player == primary_agent_player
+
+        total_reward = 0
+        game_steps = 0
+        actions_taken = []  # Store actions for analysis
+
+        # Play an episode
+        while not env.done:
+            # Get valid actions
+            valid_actions = env.get_valid_actions()
+
+            if not valid_actions:
+                break
+
+            # Choose an action based on which agent's turn it is
+            if is_primary_turn:  # Primary agent's turn (always player 1)
+                action = primary_agent.get_action(state, valid_actions)
+                actions_taken.append(action)
+            else:  # Opponent agent's turn (always player 2)
+                # Convert state for player 2's perspective
+                opp_state = _convert_state_for_opponent(state)
+                action = opponent_agent.get_action(opp_state, valid_actions)
+
+            # Take the action
+            next_state, reward, done, info = env.step(action)
+
+            # Get valid actions for next state
+            next_valid_actions = []
+            if not done:
+                next_valid_actions = env.get_valid_actions()
+
+            # Update Q-values for primary agent only when it's player 1's turn
+            if is_primary_turn:
+                primary_agent.update(state, action, reward, next_state, next_valid_actions)
+
+            # We don't update the primary agent when it's player 2's turn
+            # This is the key difference - we only learn from player 1's perspective
+
+            state = next_state
+            total_reward += reward if is_primary_turn else -reward
+            game_steps += 1
+            is_primary_turn = env.current_player == primary_agent_player  # Update turn
+
+            # Render game if requested
+            if render_interval > 0 and episode % render_interval == 0:
+                os.system("clear" if os.name == "posix" else "cls")
+                print(f"Episode: {episode + 1}/{episodes}")
+                print(f"Step: {game_steps}, Player: {env.current_player}")
+                print(f"Primary agent is Player {primary_agent_player}")
+                print(f"Current turn: {'Primary' if is_primary_turn else 'Opponent'}")
+                env.render()
+                time.sleep(0.5)
+
+        # Record game result based on primary agent's player number (always 1)
+        primary_agent_won = env.winner == primary_agent_player
+        opponent_agent_won = env.winner is not None and env.winner != primary_agent_player
+
+        if primary_agent_won:
+            primary_wins.append(1)
+            opponent_wins.append(0)
+            draws.append(0)
+        elif opponent_agent_won:
+            primary_wins.append(0)
+            opponent_wins.append(1)
+            draws.append(0)
+        else:  # Draw
+            primary_wins.append(0)
+            opponent_wins.append(0)
+            draws.append(1)
+
+        # Update ELO rating
+        if env.winner is not None:
+            elo_ratings.append(
+                _update_elo(
+                    elo_ratings[-1],
+                    primary_agent_won,
+                    k_factor=32,
+                )
+            )
+        else:
+            elo_ratings.append(elo_ratings[-1])  # No change for draws
+
+        # Record metrics for this episode
+        rewards.append(total_reward)
+        q_table_sizes.append(primary_agent.get_q_table_size())
+        exploration_rates.append(primary_agent.exploration_rate)
+
+        # Decay exploration rate
+        primary_agent.decay_exploration()
+
+        # Update opponent agent periodically
+        if (episode + 1) % opponent_update_interval == 0:
+            opponent_agent = copy.deepcopy(primary_agent)
+            print(f"\nUpdated opponent agent at episode {episode + 1}")
+
+        # Save periodically
+        if (episode + 1) % save_interval == 0 or episode == episodes - 1:
+            # Calculate stats
+            recent_rewards = np.mean(rewards[-100:])
+            recent_win_rate = np.mean(primary_wins[-100:])
+            recent_loss_rate = np.mean(opponent_wins[-100:])
+            recent_draw_rate = np.mean(draws[-100:])
+
+            # Save models
+            primary_agent.save_qtable_pickle(f"dropmind/models/player1_qtable_episode_{episode + 1}.pkl")
+            if save_json:
+                primary_agent.save_qtable_json(f"dropmind/models/player1_qtable_episode_{episode + 1}.json")
+
+            # Log progress
+            elapsed_time = time.time() - start_time
+            print(f"\nEpisode {episode + 1} completed in {elapsed_time:.2f} seconds")
+            print(f"Q-table size: {primary_agent.get_q_table_size()} states")
+            print(f"Recent player 1 win rate: {recent_win_rate:.2f}")
+            print(f"Recent player 2 win rate: {recent_loss_rate:.2f}")
+            print(f"Recent draw rate: {recent_draw_rate:.2f}")
+            print(f"Recent average reward: {recent_rewards:.2f}")
+            print(f"Current exploration rate: {primary_agent.exploration_rate:.4f}")
+            print(f"Current ELO rating: {elo_ratings[-1]:.1f}")
+
+            # Plot metrics
+            plot_self_play_metrics(
+                episode, rewards, primary_wins, opponent_wins, draws, q_table_sizes, exploration_rates, elo_ratings
+            )
+
+    # Final save
+    primary_agent.save_qtable_pickle("dropmind/models/player1_qtable_final.pkl")
+    if save_json:
+        primary_agent.save_qtable_json("dropmind/models/player1_qtable_final.json")
+
+    return primary_agent, rewards, primary_wins, opponent_wins, draws, elo_ratings
+
+
 def _convert_state_for_opponent(state):
     """
     Convert a state representation to the opponent's perspective.
@@ -333,28 +516,44 @@ def plot_self_play_metrics(
 if __name__ == "__main__":
     # Parse command line arguments
     parser = argparse.ArgumentParser(description="Train a Q-learning agent using self-play for Connect Three")
-    parser.add_argument("--episodes", type=int, default=10000, help="Number of episodes to train")
+    parser.add_argument("--episodes", type=int, default=20000, help="Number of episodes to train")
     parser.add_argument("--save-interval", type=int, default=1000, help="Save model every X episodes")
     parser.add_argument("--learning-rate", type=float, default=0.1, help="Learning rate (alpha)")
-    parser.add_argument("--discount-factor", type=float, default=0.9, help="Discount factor (gamma)")
+    parser.add_argument("--discount-factor", type=float, default=0.95, help="Discount factor (gamma)")
     parser.add_argument("--exploration-rate", type=float, default=1.0, help="Initial exploration rate (epsilon)")
-    parser.add_argument("--exploration-decay", type=float, default=0.995, help="Exploration decay rate")
+    parser.add_argument("--exploration-decay", type=float, default=0.999, help="Exploration decay rate")
     parser.add_argument("--min-exploration-rate", type=float, default=0.01, help="Minimum exploration rate")
-    parser.add_argument("--opponent-update", type=int, default=500, help="Update opponent every X episodes")
+    parser.add_argument("--opponent-update", type=int, default=200, help="Update opponent every X episodes")
     parser.add_argument("--no-json", action="store_false", dest="save_json", help="Do not save in JSON format")
     parser.add_argument("--render", type=int, default=0, help="Render every X episodes (0 for no rendering)")
+    parser.add_argument("--player1-only", action="store_true", help="Train only as player 1")
     args = parser.parse_args()
 
-    # Train the agent
-    self_play_train(
-        episodes=args.episodes,
-        save_interval=args.save_interval,
-        learning_rate=args.learning_rate,
-        discount_factor=args.discount_factor,
-        exploration_rate=args.exploration_rate,
-        exploration_decay=args.exploration_decay,
-        min_exploration_rate=args.min_exploration_rate,
-        opponent_update_interval=args.opponent_update,
-        save_json=args.save_json,
-        render_interval=args.render,
-    )
+    # Choose training function based on arguments
+    if args.player1_only:
+        player1_only_train(
+            episodes=args.episodes,
+            save_interval=args.save_interval,
+            learning_rate=args.learning_rate,
+            discount_factor=args.discount_factor,
+            exploration_rate=args.exploration_rate,
+            exploration_decay=args.exploration_decay,
+            min_exploration_rate=args.min_exploration_rate,
+            opponent_update_interval=args.opponent_update,
+            save_json=args.save_json,
+            render_interval=args.render,
+        )
+    else:
+        # Original self-play training
+        self_play_train(
+            episodes=args.episodes,
+            save_interval=args.save_interval,
+            learning_rate=args.learning_rate,
+            discount_factor=args.discount_factor,
+            exploration_rate=args.exploration_rate,
+            exploration_decay=args.exploration_decay,
+            min_exploration_rate=args.min_exploration_rate,
+            opponent_update_interval=args.opponent_update,
+            save_json=args.save_json,
+            render_interval=args.render,
+        )

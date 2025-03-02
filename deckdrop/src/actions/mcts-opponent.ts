@@ -2,7 +2,7 @@ import streamDeck from "@elgato/streamdeck";
 import { EMPTY, PLAYER_ONE, PLAYER_TWO } from "./game-renderer";
 
 // Default number of MCTS simulations to run
-export const DEFAULT_MCTS_SIMULATIONS = 10000;
+export const DEFAULT_MCTS_SIMULATIONS = 500;
 
 // MCTSNode represents a state in the game
 class MCTSNode {

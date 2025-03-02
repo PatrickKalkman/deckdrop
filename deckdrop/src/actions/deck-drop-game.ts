@@ -9,12 +9,15 @@ import streamDeck, {
 import { GameRenderer, EMPTY_SLOT_IMAGE } from "./game-renderer";
 import { GameLogic } from "./game-logic";
 
+// Update your GameSettings type:
 type GameSettings = {
-  currentPlayer: number; 
+  currentPlayer: number;
   gameOver: boolean;
-  vsAI: boolean; // Flag for AI mode
-  aiIsPlayerTwo: boolean; // Flag for which player AI controls
+  vsAI: boolean;
+  aiIsPlayerTwo: boolean;
   player?: string;
+  aiStrategy?: 'qlearning' | 'mcts';
+  mctsSimulations?: number;
 };
 
 type CoordinateKey = string;
@@ -171,12 +174,21 @@ export class DeckDropGame extends SingletonAction<GameSettings> {
       // Update AI player based on user's selection
       const aiIsPlayerTwo = playerChoice === 'player1';
       this.gameLogic.setAIPlayer(aiIsPlayerTwo);
+    }
+    
+    // Handle AI strategy selection
+    if (ev.payload.settings?.aiStrategy) {
+      const strategy = ev.payload.settings.aiStrategy;
+      const simulations = ev.payload.settings.mctsSimulations || 5000;
       
-      // Reset the game for a fresh start with the new settings
-      if (!this.isResetting) {
-        await this.gameLogic.resetGame();
-        await this.renderer.renderBoard(this.gameLogic.getBoard());
-      }
+      streamDeck.logger.info(`AI strategy changed to: ${strategy}`);
+      this.gameLogic.setAIStrategy(strategy, simulations);
+    }
+    
+    // Reset the game for a fresh start with the new settings
+    if (!this.isResetting) {
+      await this.gameLogic.resetGame();
+      await this.renderer.renderBoard(this.gameLogic.getBoard());
     }
   }  
 }

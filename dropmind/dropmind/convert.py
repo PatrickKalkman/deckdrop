@@ -5,7 +5,7 @@ with open("dropmind/models/qtable_final.json", "r") as f:
     qtable = json.load(f)
 
 # Create a TypeScript file
-with open("dropmind/models/qtable.ts", "w") as f:
+with open("../deckdrop/src/actions//q-table.ts", "w") as f:
     f.write("// Auto-generated Q-table\n")
     f.write("export const qTableData = ")
     json.dump(qtable, f)
