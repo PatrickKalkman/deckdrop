@@ -3,22 +3,99 @@
   <head lang="en">
     <meta charset="utf-8" />
     <script src="https://sdpi-components.dev/releases/v3/sdpi-components.js"></script>
+    <style>
+      .hidden {
+        display: none;
+      }
+    </style>
   </head>
   <body>
     <sdpi-item label="Player Selection">
       <sdpi-select setting="player" placeholder="Choose your player">
-        <option value="player1">Player One</option>
+        <option value="player1" selected>Player One</option>
         <option value="player2">Player Two</option>
       </sdpi-select>
     </sdpi-item>
+    
+    <sdpi-item label="AI Strategy">
+      <sdpi-select setting="aiStrategy" placeholder="Choose AI strategy">
+        <option value="mcts" selected>MCTS (Stronger)</option>
+        <option value="qlearning">Q-Learning (Weaker)</option>
+      </sdpi-select>
+    </sdpi-item>
+    
+    <sdpi-item label="AI Difficulty" id="difficultyItem">
+      <sdpi-select setting="mctsSimulations" placeholder="Choose difficulty">
+        <option value="100">Easy (100 simulations)</option>
+        <option value="500" selected>Medium (500 simulations)</option>
+        <option value="2000">Hard (2000 simulations)</option>
+        <option value="10000">Expert (10000 simulations)</option>
+      </sdpi-select>
+    </sdpi-item>
+    
     <script>
       const { streamDeckClient } = SDPIComponents;
-      document.querySelector('sdpi-select[setting="player"]').addEventListener('change', (e) => {
-        streamDeckClient.setSettings({
-          player: e.target.value,
-          aiStrategy: 'mcts',
-          mctsSimulations: 2000,
-        });
+      
+      // Function to update settings
+      function updateSettings() {
+        const player = document.querySelector('sdpi-select[setting="player"]').value;
+        const aiStrategy = document.querySelector('sdpi-select[setting="aiStrategy"]').value;
+        const mctsSimulations = document.querySelector('sdpi-select[setting="mctsSimulations"]').value;
+        
+        const settings = {
+          player: player,
+          aiStrategy: aiStrategy,
+          mctsSimulations: parseInt(mctsSimulations)
+        };
+        
+        streamDeckClient.setSettings(settings);
+      }
+      
+      // Function to toggle difficulty visibility
+      function toggleDifficultyVisibility() {
+        const aiStrategy = document.querySelector('sdpi-select[setting="aiStrategy"]').value;
+        const difficultyItem = document.getElementById('difficultyItem');
+        
+        if (aiStrategy === 'mcts') {
+          difficultyItem.classList.remove('hidden');
+        } else {
+          difficultyItem.classList.add('hidden');
+        }
+      }
+      
+      // Add event listeners
+      document.querySelector('sdpi-select[setting="player"]').addEventListener('change', updateSettings);
+      
+      document.querySelector('sdpi-select[setting="aiStrategy"]').addEventListener('change', (e) => {
+        toggleDifficultyVisibility();
+        updateSettings();
+      });
+      
+      document.querySelector('sdpi-select[setting="mctsSimulations"]').addEventListener('change', updateSettings);
+      
+      // Initialize UI state
+      toggleDifficultyVisibility();
+      
+      // Initialize with default settings
+      streamDeckClient.getSettings().then(settings => {
+        if (settings) {
+          if (settings.player) {
+            document.querySelector('sdpi-select[setting="player"]').value = settings.player;
+          }
+          if (settings.aiStrategy) {
+            document.querySelector('sdpi-select[setting="aiStrategy"]').value = settings.aiStrategy;
+            toggleDifficultyVisibility();
+          }
+          if (settings.mctsSimulations) {
+            const simulationsSelect = document.querySelector('sdpi-select[setting="mctsSimulations"]');
+            // Find closest option or add a custom one
+            const options = Array.from(simulationsSelect.options).map(opt => parseInt(opt.value));
+            const closest = options.reduce((prev, curr) => 
+              Math.abs(curr - settings.mctsSimulations) < Math.abs(prev - settings.mctsSimulations) ? curr : prev
+            );
+            simulationsSelect.value = closest.toString();
+          }
+        }
       });
     </script>
   </body>
