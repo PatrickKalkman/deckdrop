@@ -88,14 +88,17 @@
           aiStrategySelect.value = settings.aiStrategy || 'mcts';
           toggleDifficultyVisibility();
           
+          // Set default MCTS simulations to 500 if not specified
+          const simulationsSelect = document.querySelector('sdpi-select[setting="mctsSimulations"]');
           if (settings.mctsSimulations) {
-            const simulationsSelect = document.querySelector('sdpi-select[setting="mctsSimulations"]');
             // Find closest option or add a custom one
             const options = Array.from(simulationsSelect.options).map(opt => parseInt(opt.value));
             const closest = options.reduce((prev, curr) => 
               Math.abs(curr - settings.mctsSimulations) < Math.abs(prev - settings.mctsSimulations) ? curr : prev
             );
             simulationsSelect.value = closest.toString();
+          } else {
+            simulationsSelect.value = "500"; // Default to medium difficulty
           }
         }
       });
