@@ -74,6 +74,12 @@ export class GameRenderer {
     
     // After blinking, fill the board with winner's color in a diagonal pattern
     await this.fillBoardWithWinnerPattern(player);
+    
+    // Wait a moment to show the filled board
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    // Transition back to empty board
+    await this.transitionToEmptyBoard();
   }
 
   /**
@@ -122,6 +128,46 @@ export class GameRenderer {
     
     await Promise.all(fillPromises);
     streamDeck.logger.info(`Completed fill animation for player ${player}`);
+  }
+
+  /**
+   * Transition back to empty board in a diagonal pattern (reverse of fill)
+   */
+  private async transitionToEmptyBoard(): Promise<void> {
+    streamDeck.logger.info("Transitioning back to empty board");
+    
+    // Clear the board in a diagonal pattern (reverse of fill)
+    const diagonals = [
+      [[2,4]], // Start with bottom-right corner
+      [[2,3], [1,4]], // Second diagonal
+      [[2,2], [1,3], [0,4]], // Third diagonal
+      [[2,1], [1,2], [0,3]], // Fourth diagonal
+      [[2,0], [1,1], [0,2]], // Fifth diagonal
+      [[1,0], [0,1]], // Sixth diagonal
+      [[0,0]] // Last diagonal (top-left corner)
+    ];
+    
+    // Clear each diagonal with a slight delay
+    for (const diagonal of diagonals) {
+      for (const [row, col] of diagonal) {
+        await this.setButtonImage(row, col, EMPTY_SLOT_IMAGE);
+      }
+      
+      // Short delay before clearing next diagonal
+      await new Promise(resolve => setTimeout(resolve, 150));
+    }
+    
+    // Finally, verify all cells are cleared
+    const clearPromises: Promise<boolean>[] = [];
+    
+    for (let row = 0; row < 3; row++) {
+      for (let col = 0; col < 5; col++) {
+        clearPromises.push(this.setButtonImage(row, col, EMPTY_SLOT_IMAGE));
+      }
+    }
+    
+    await Promise.all(clearPromises);
+    streamDeck.logger.info("Completed transition to empty board");
   }
 
 
