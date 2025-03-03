@@ -1,6 +1,6 @@
 # DeckDrop: An AI-Powered Connect Three Game for Elgato Stream Deck
 
-![DeckDrop Cover](./images/deckdrop-cover.png)
+![DeckDrop Cover](./cover.jpg)
 
 [![GitHub stars](https://img.shields.io/github/stars/PatrickKalkman/deckdrop)](https://github.com/PatrickKalkman/deckdrop/stargazers)
 [![GitHub contributors](https://img.shields.io/github/contributors/PatrickKalkman/deckdrop)](https://github.com/PatrickKalkman/deckdrop/graphs/contributors)
