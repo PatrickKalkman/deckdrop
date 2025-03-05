@@ -3,11 +3,6 @@
   <head lang="en">
     <meta charset="utf-8" />
     <script src="https://sdpi-components.dev/releases/v3/sdpi-components.js"></script>
-    <style>
-      .hidden {
-        display: none !important;
-      }
-    </style>
   </head>
   <body>
     <sdpi-item label="Player Selection">
@@ -26,7 +21,7 @@
     </sdpi-item>
     
     <!-- MCTS settings -->
-    <sdpi-item label="AI Difficulty" id="difficultyItem">
+    <sdpi-item label="AI Difficulty (for MCTS strategy)">
       <sdpi-select setting="mctsSimulations" placeholder="Choose difficulty">
         <option value="100">Easy (100 simulations)</option>
         <option value="500" selected>Medium (500 simulations)</option>
@@ -36,11 +31,11 @@
     </sdpi-item>
     
     <!-- Groq settings -->
-    <sdpi-item label="Groq API Key" id="groqApiKeyItem" class="hidden">
+    <sdpi-item label="Groq API Key (for Groq LLM strategy)">
       <sdpi-textfield setting="groqApiKey" placeholder="Enter your Groq API key"></sdpi-textfield>
     </sdpi-item>
     
-    <sdpi-item label="Groq Model" id="groqModelItem" class="hidden">
+    <sdpi-item label="Groq Model (for Groq LLM strategy)">
       <sdpi-select setting="groqModel" placeholder="Choose Groq model">
         <option value="llama-3.3-70b-versatile" selected>Llama 3.3 70B</option>
         <option value="llama-3.1-70b-versatile">Llama 3.1 70B</option>
@@ -74,40 +69,9 @@
         streamDeckClient.setSettings(settings);
       }
       
-      // Function to toggle visibility of strategy-specific settings
-      function toggleSettingsVisibility() {
-        const aiStrategy = document.getElementById('aiStrategySelect').value;
-        const difficultyItem = document.getElementById('difficultyItem');
-        const groqApiKeyItem = document.getElementById('groqApiKeyItem');
-        const groqModelItem = document.getElementById('groqModelItem');
-        
-        console.log("Toggling visibility for strategy:", aiStrategy);
-        
-        // Hide all strategy-specific settings
-        difficultyItem.classList.add('hidden');
-        groqApiKeyItem.classList.add('hidden');
-        groqModelItem.classList.add('hidden');
-        
-        // Show only the relevant settings
-        if (aiStrategy === 'mcts') {
-          console.log("Showing MCTS settings");
-          difficultyItem.classList.remove('hidden');
-        } else if (aiStrategy === 'groq') {
-          console.log("Showing Groq settings");
-          groqApiKeyItem.classList.remove('hidden');
-          groqModelItem.classList.remove('hidden');
-        }
-      }
-      
       // Add event listeners
       document.querySelector('sdpi-select[setting="player"]').addEventListener('change', updateSettings);
-      
-      document.getElementById('aiStrategySelect').addEventListener('change', function() {
-        console.log("AI strategy changed to:", this.value);
-        toggleSettingsVisibility();
-        updateSettings();
-      });
-      
+      document.getElementById('aiStrategySelect').addEventListener('change', updateSettings);
       document.querySelector('sdpi-select[setting="mctsSimulations"]').addEventListener('change', updateSettings);
       document.querySelector('sdpi-textfield[setting="groqApiKey"]').addEventListener('change', updateSettings);
       document.querySelector('sdpi-select[setting="groqModel"]').addEventListener('change', updateSettings);
@@ -145,17 +109,8 @@
           if (settings.groqModel) {
             document.querySelector('sdpi-select[setting="groqModel"]').value = settings.groqModel;
           }
-          
-          // Apply visibility changes after settings are loaded
-          toggleSettingsVisibility();
-        } else {
-          // If no settings, still toggle visibility based on default selection
-          toggleSettingsVisibility();
         }
       });
-      
-      // Also toggle visibility when DOM is fully loaded
-      document.addEventListener('DOMContentLoaded', toggleSettingsVisibility);
     </script>
   </body>
 </html>
