@@ -14,9 +14,10 @@ Transform your Elgato Stream Deck into an engaging Connect Three game with intel
 ## ✨ Key Features
 
 - **Complete Connect Three Game**: Play the classic game right on your Stream Deck
-- **Dual AI Strategies**: Challenge yourself against two different AI opponents:
+- **Triple AI Strategies**: Challenge yourself against three different AI opponents:
   - **Q-Learning AI**: Trained through reinforcement learning
   - **MCTS AI**: Unbeatable Monte Carlo Tree Search algorithm
+  - **LLM AI**: Play against a Large Language Model via Groq API
 - **Visual Feedback**: Animated token drops and victory celebrations
 - **Configurable Settings**: Choose your player and AI difficulty level
 - **Seamless Integration**: Works natively with the Stream Deck hardware
@@ -43,6 +44,12 @@ DeckDrop implements a compact 3x5 version of the Connect Three game on the Strea
 - Nearly unbeatable when playing as Player 1
 - Configurable simulation count to adjust difficulty
 - Uses advanced heuristics for more intelligent gameplay
+
+### Large Language Model (LLM) AI via Groq
+- Connects to Groq's API to leverage powerful language models
+- Provides a unique, human-like playing experience
+- Configurable with different LLM models (default: llama-3.3-70b-versatile)
+- Requires a Groq API key for operation
 
 ## 🚀 Installation
 
@@ -80,6 +87,7 @@ npm run build
 - `game-logic.ts`: Core game rules and state management
 - `game-renderer.ts`: Visual representation on Stream Deck
 - `mcts-opponent.ts`: Monte Carlo Tree Search implementation
+- `groq-opponent.ts`: Groq LLM API integration
 - `win-checker.ts`: Win condition detection
 
 ### Building for Development
