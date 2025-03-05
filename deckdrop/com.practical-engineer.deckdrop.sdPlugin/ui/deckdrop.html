@@ -79,6 +79,8 @@
         const groqApiKeyItem = document.getElementById('groqApiKeyItem');
         const groqModelItem = document.getElementById('groqModelItem');
         
+        console.log("Current AI strategy:", aiStrategy);
+        
         // Hide all strategy-specific settings first
         difficultyItem.classList.add('hidden');
         groqApiKeyItem.classList.add('hidden');
@@ -86,8 +88,10 @@
         
         // Show only the relevant settings for the selected strategy
         if (aiStrategy === 'mcts') {
+          console.log("Showing MCTS settings");
           difficultyItem.classList.remove('hidden');
         } else if (aiStrategy === 'groq') {
+          console.log("Showing Groq settings");
           groqApiKeyItem.classList.remove('hidden');
           groqModelItem.classList.remove('hidden');
         }
@@ -97,16 +101,13 @@
       document.querySelector('sdpi-select[setting="player"]').addEventListener('change', updateSettings);
       
       document.querySelector('sdpi-select[setting="aiStrategy"]').addEventListener('change', (e) => {
-        toggleSettingsVisibility();
         updateSettings();
+        setTimeout(toggleSettingsVisibility, 50);
       });
       
       document.querySelector('sdpi-select[setting="mctsSimulations"]').addEventListener('change', updateSettings);
       document.querySelector('sdpi-textfield[setting="groqApiKey"]').addEventListener('change', updateSettings);
       document.querySelector('sdpi-select[setting="groqModel"]').addEventListener('change', updateSettings);
-      
-      // Initialize UI state
-      toggleSettingsVisibility();
       
       // Initialize with default settings
       streamDeckClient.getSettings().then(settings => {
@@ -143,7 +144,7 @@
           }
           
           // Update UI visibility based on current settings
-          toggleSettingsVisibility();
+          setTimeout(toggleSettingsVisibility, 100);
         }
       });
     </script>
