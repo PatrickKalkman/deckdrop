@@ -4,6 +4,7 @@ import terser from "@rollup/plugin-terser";
 import typescript from "@rollup/plugin-typescript";
 import path from "node:path";
 import url from "node:url";
+import json from '@rollup/plugin-json';
 
 const isWatching = !!process.env.ROLLUP_WATCH;
 const sdPlugin = "com.practical-engineer.deckdrop.sdPlugin";
@@ -16,10 +17,12 @@ const config = {
 	output: {
 		file: `${sdPlugin}/bin/plugin.js`,
 		sourcemap: isWatching,
+		inlineDynamicImports: true,
 		sourcemapPathTransform: (relativeSourcePath, sourcemapPath) => {
 			return url.pathToFileURL(path.resolve(path.dirname(sourcemapPath), relativeSourcePath)).href;
 		}
 	},
+	context: 'this',
 	plugins: [
 		{
 			name: "watch-externals",
@@ -42,7 +45,8 @@ const config = {
 			generateBundle() {
 				this.emitFile({ fileName: "package.json", source: `{ "type": "module" }`, type: "asset" });
 			}
-		}
+		},
+		 json()
 	]
 };
 

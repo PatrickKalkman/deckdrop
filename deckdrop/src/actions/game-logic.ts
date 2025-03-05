@@ -2,7 +2,7 @@ import { WinChecker } from "./win-checker";
 import { EMPTY, PLAYER_ONE, PLAYER_TWO } from "./game-renderer";
 import streamDeck from "@elgato/streamdeck";
 import { AIOpponent } from "./ai-opponent";
-import { DEFAULT_MCTS_SIMULATIONS } from "./mcts-opponent";
+import { DEFAULT_GROQ_MODEL } from "./groq-opponent";
 
 export class GameLogic {
   // Game board (3 rows × 5 columns)

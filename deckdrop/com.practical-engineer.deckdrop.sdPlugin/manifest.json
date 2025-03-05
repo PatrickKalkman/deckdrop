@@ -2,6 +2,7 @@
 	"Name": "deckdrop",
 	"Version": "0.6.0.0",
 	"Author": "Patrick Kalkman",
+	"URL": "https://practical-engineer.ai/deckdrop-your-quirky-ai-challenger-awaits/",
 	"PropertyInspectorPath": "ui/deckdrop.html",
 	"Actions": [
 		{

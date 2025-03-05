@@ -1,5 +1,0 @@
-/drop
-/add       dropmind/dropmind/agent.py
-/add       dropmind/dropmind/environment.py
-/add       dropmind/dropmind/train.py
-/read-only /Users/patrickkalkman/aider/CONVENTIONS.md
