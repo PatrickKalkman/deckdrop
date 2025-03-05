@@ -23,26 +23,32 @@
       </sdpi-select>
     </sdpi-item>
     
-    <sdpi-item label="Groq API Key" id="groqApiKeyItem" style="display: none;">
-      <sdpi-textfield setting="groqApiKey" placeholder="Enter your Groq API key"></sdpi-textfield>
-    </sdpi-item>
+    <!-- MCTS settings -->
+    <div id="mctsSettings">
+      <sdpi-item label="AI Difficulty">
+        <sdpi-select setting="mctsSimulations" placeholder="Choose difficulty">
+          <option value="100">Easy (100 simulations)</option>
+          <option value="500" selected>Medium (500 simulations)</option>
+          <option value="2000">Hard (2000 simulations)</option>
+          <option value="10000">Expert (10000 simulations)</option>
+        </sdpi-select>
+      </sdpi-item>
+    </div>
     
-    <sdpi-item label="Groq Model" id="groqModelItem" style="display: none;">
-      <sdpi-select setting="groqModel" placeholder="Choose Groq model">
-        <option value="llama-3.3-70b-versatile" selected>Llama 3.3 70B</option>
-        <option value="llama-3.1-70b-versatile">Llama 3.1 70B</option>
-        <option value="mixtral-8x7b-32768">Mixtral 8x7B</option>
-      </sdpi-select>
-    </sdpi-item>
-    
-    <sdpi-item label="AI Difficulty" id="difficultyItem" style="display: none;">
-      <sdpi-select setting="mctsSimulations" placeholder="Choose difficulty">
-        <option value="100">Easy (100 simulations)</option>
-        <option value="500" selected>Medium (500 simulations)</option>
-        <option value="2000">Hard (2000 simulations)</option>
-        <option value="10000">Expert (10000 simulations)</option>
-      </sdpi-select>
-    </sdpi-item>
+    <!-- Groq settings -->
+    <div id="groqSettings" style="display: none;">
+      <sdpi-item label="Groq API Key">
+        <sdpi-textfield setting="groqApiKey" placeholder="Enter your Groq API key"></sdpi-textfield>
+      </sdpi-item>
+      
+      <sdpi-item label="Groq Model">
+        <sdpi-select setting="groqModel" placeholder="Choose Groq model">
+          <option value="llama-3.3-70b-versatile" selected>Llama 3.3 70B</option>
+          <option value="llama-3.1-70b-versatile">Llama 3.1 70B</option>
+          <option value="mixtral-8x7b-32768">Mixtral 8x7B</option>
+        </sdpi-select>
+      </sdpi-item>
+    </div>
     
     <script>
       const { streamDeckClient } = SDPIComponents;
@@ -76,32 +82,28 @@
         const aiStrategySelect = document.querySelector('sdpi-select[setting="aiStrategy"]');
         const aiStrategy = aiStrategySelect ? aiStrategySelect.value : 'mcts';
         
-        // Get all the items we need to toggle
-        const difficultyItem = document.getElementById('difficultyItem');
-        const groqApiKeyItem = document.getElementById('groqApiKeyItem');
-        const groqModelItem = document.getElementById('groqModelItem');
-        
         console.log("Toggling visibility for strategy:", aiStrategy);
         
-        // Make sure we have all the elements
-        if (!difficultyItem || !groqApiKeyItem || !groqModelItem) {
-          console.error("Missing UI elements for toggling visibility");
+        // Get the settings containers
+        const mctsSettings = document.getElementById('mctsSettings');
+        const groqSettings = document.getElementById('groqSettings');
+        
+        if (!mctsSettings || !groqSettings) {
+          console.error("Missing settings containers");
           return;
         }
         
-        // Hide everything first
-        difficultyItem.style.display = 'none';
-        groqApiKeyItem.style.display = 'none';
-        groqModelItem.style.display = 'none';
+        // Hide all settings first
+        mctsSettings.style.display = 'none';
+        groqSettings.style.display = 'none';
         
-        // Show only what's needed based on strategy
+        // Show only the relevant settings
         if (aiStrategy === 'mcts') {
           console.log("Showing MCTS settings");
-          difficultyItem.style.display = '';
+          mctsSettings.style.display = '';
         } else if (aiStrategy === 'groq') {
           console.log("Showing Groq settings");
-          groqApiKeyItem.style.display = '';
-          groqModelItem.style.display = '';
+          groqSettings.style.display = '';
         }
       }
       
@@ -110,10 +112,10 @@
       
       document.querySelector('sdpi-select[setting="aiStrategy"]').addEventListener('change', (e) => {
         console.log("AI strategy changed to:", e.target.value);
-        updateSettings();
-        // Apply visibility changes immediately and again after a delay to ensure it works
+        // Toggle visibility first
         toggleSettingsVisibility();
-        setTimeout(toggleSettingsVisibility, 100);
+        // Then update settings
+        updateSettings();
       });
       
       document.querySelector('sdpi-select[setting="mctsSimulations"]').addEventListener('change', updateSettings);
@@ -161,10 +163,8 @@
           }
           
           console.log("Settings loaded, updating UI visibility");
-          // Apply visibility changes immediately and again after delays to ensure it works
+          // Apply visibility changes
           toggleSettingsVisibility();
-          setTimeout(toggleSettingsVisibility, 100);
-          setTimeout(toggleSettingsVisibility, 500);
         }
       });
     </script>
