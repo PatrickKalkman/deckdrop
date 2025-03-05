@@ -21,6 +21,19 @@
       <sdpi-select setting="aiStrategy" placeholder="Choose AI strategy">
         <option value="mcts" selected>MCTS (Stronger)</option>
         <option value="qlearning">Q-Learning (Weaker)</option>
+        <option value="groq">Groq LLM (Experimental)</option>
+      </sdpi-select>
+    </sdpi-item>
+    
+    <sdpi-item label="Groq API Key" id="groqApiKeyItem" class="hidden">
+      <sdpi-textfield setting="groqApiKey" placeholder="Enter your Groq API key"></sdpi-textfield>
+    </sdpi-item>
+    
+    <sdpi-item label="Groq Model" id="groqModelItem" class="hidden">
+      <sdpi-select setting="groqModel" placeholder="Choose Groq model">
+        <option value="llama-3.3-70b-versatile" selected>Llama 3.3 70B</option>
+        <option value="llama-3.1-70b-versatile">Llama 3.1 70B</option>
+        <option value="mixtral-8x7b-32768">Mixtral 8x7B</option>
       </sdpi-select>
     </sdpi-item>
     
@@ -41,6 +54,8 @@
         const player = document.querySelector('sdpi-select[setting="player"]').value;
         const aiStrategy = document.querySelector('sdpi-select[setting="aiStrategy"]').value;
         const mctsSimulations = document.querySelector('sdpi-select[setting="mctsSimulations"]').value;
+        const groqApiKey = document.querySelector('sdpi-textfield[setting="groqApiKey"]').value;
+        const groqModel = document.querySelector('sdpi-select[setting="groqModel"]').value;
         
         const settings = {
           player: player,
@@ -48,18 +63,33 @@
           mctsSimulations: parseInt(mctsSimulations)
         };
         
+        // Only include Groq settings if they're provided
+        if (aiStrategy === 'groq') {
+          if (groqApiKey) settings.groqApiKey = groqApiKey;
+          if (groqModel) settings.groqModel = groqModel;
+        }
+        
         streamDeckClient.setSettings(settings);
       }
       
-      // Function to toggle difficulty visibility
-      function toggleDifficultyVisibility() {
+      // Function to toggle visibility of strategy-specific settings
+      function toggleSettingsVisibility() {
         const aiStrategy = document.querySelector('sdpi-select[setting="aiStrategy"]').value;
         const difficultyItem = document.getElementById('difficultyItem');
+        const groqApiKeyItem = document.getElementById('groqApiKeyItem');
+        const groqModelItem = document.getElementById('groqModelItem');
         
+        // Hide all strategy-specific settings first
+        difficultyItem.classList.add('hidden');
+        groqApiKeyItem.classList.add('hidden');
+        groqModelItem.classList.add('hidden');
+        
+        // Show only the relevant settings for the selected strategy
         if (aiStrategy === 'mcts') {
           difficultyItem.classList.remove('hidden');
-        } else {
-          difficultyItem.classList.add('hidden');
+        } else if (aiStrategy === 'groq') {
+          groqApiKeyItem.classList.remove('hidden');
+          groqModelItem.classList.remove('hidden');
         }
       }
       
@@ -67,14 +97,16 @@
       document.querySelector('sdpi-select[setting="player"]').addEventListener('change', updateSettings);
       
       document.querySelector('sdpi-select[setting="aiStrategy"]').addEventListener('change', (e) => {
-        toggleDifficultyVisibility();
+        toggleSettingsVisibility();
         updateSettings();
       });
       
       document.querySelector('sdpi-select[setting="mctsSimulations"]').addEventListener('change', updateSettings);
+      document.querySelector('sdpi-textfield[setting="groqApiKey"]').addEventListener('change', updateSettings);
+      document.querySelector('sdpi-select[setting="groqModel"]').addEventListener('change', updateSettings);
       
       // Initialize UI state
-      toggleDifficultyVisibility();
+      toggleSettingsVisibility();
       
       // Initialize with default settings
       streamDeckClient.getSettings().then(settings => {
@@ -86,7 +118,6 @@
           // Set default AI strategy to MCTS if not specified
           const aiStrategySelect = document.querySelector('sdpi-select[setting="aiStrategy"]');
           aiStrategySelect.value = settings.aiStrategy || 'mcts';
-          toggleDifficultyVisibility();
           
           // Set default MCTS simulations to 500 if not specified
           const simulationsSelect = document.querySelector('sdpi-select[setting="mctsSimulations"]');
@@ -100,6 +131,19 @@
           } else {
             simulationsSelect.value = "500"; // Default to medium difficulty
           }
+          
+          // Set Groq API key if specified
+          if (settings.groqApiKey) {
+            document.querySelector('sdpi-textfield[setting="groqApiKey"]').value = settings.groqApiKey;
+          }
+          
+          // Set Groq model if specified
+          if (settings.groqModel) {
+            document.querySelector('sdpi-select[setting="groqModel"]').value = settings.groqModel;
+          }
+          
+          // Update UI visibility based on current settings
+          toggleSettingsVisibility();
         }
       });
     </script>
