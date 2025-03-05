@@ -62,7 +62,6 @@ export class DeckDropGame extends SingletonAction<GameSettings> {
    * Occurs when the action appears on Stream Deck
    */
   override async onWillAppear(ev: WillAppearEvent<GameSettings>): Promise<void> {
-    // Log event info for debugging
     streamDeck.logger.info('Action appeared:', {
       actionId: ev.action.id,
       coordinates: ev.action.coordinates,
