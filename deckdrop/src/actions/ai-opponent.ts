@@ -2,10 +2,11 @@ import streamDeck from "@elgato/streamdeck";
 import { EMPTY, PLAYER_ONE, PLAYER_TWO } from "./game-renderer";
 import { qTableData } from "./q-table";
 import { MCTSOpponent, DEFAULT_MCTS_SIMULATIONS } from "./mcts-opponent";
+import { GroqOpponent, DEFAULT_GROQ_MODEL } from "./groq-opponent";
 
 // Define an interface for AI strategies
 interface AIStrategy {
-  getBestMove(board: number[][]): number;
+  getBestMove(board: number[][]): number | Promise<number>;
   setIsPlayerTwo(isPlayerTwo: boolean): void;
 }
 
@@ -134,14 +135,42 @@ class MCTSStrategy implements AIStrategy {
   }
 }
 
+// GroqStrategy is a wrapper for our GroqOpponent
+class GroqStrategy implements AIStrategy {
+  private groqOpponent: GroqOpponent;
+  
+  constructor(apiKey: string = "", model: string = DEFAULT_GROQ_MODEL) {
+    this.groqOpponent = new GroqOpponent(apiKey, model);
+  }
+  
+  public async getBestMove(board: number[][]): Promise<number> {
+    return await this.groqOpponent.getBestMove(board);
+  }
+  
+  public setIsPlayerTwo(isPlayerTwo: boolean): void {
+    this.groqOpponent.setIsPlayerTwo(isPlayerTwo);
+  }
+  
+  public setApiKey(apiKey: string): void {
+    this.groqOpponent.initialize(apiKey);
+  }
+  
+  public setModel(model: string): void {
+    this.groqOpponent.setModel(model);
+  }
+}
+
 export class AIOpponent {
   private strategy: AIStrategy;
   public isPlayerTwo: boolean = true; // AI is player 2 by default
   
-  constructor(strategyType: 'qlearning' | 'mcts' = 'mcts', mctsSimulations: number = DEFAULT_MCTS_SIMULATIONS) {
+  constructor(strategyType: 'qlearning' | 'mcts' | 'groq' = 'mcts', 
+              options: { mctsSimulations?: number, groqApiKey?: string, groqModel?: string } = {}) {
     // Create the appropriate strategy
     if (strategyType === 'mcts') {
-      this.strategy = new MCTSStrategy(mctsSimulations);
+      this.strategy = new MCTSStrategy(options.mctsSimulations || DEFAULT_MCTS_SIMULATIONS);
+    } else if (strategyType === 'groq') {
+      this.strategy = new GroqStrategy(options.groqApiKey, options.groqModel);
     } else {
       this.strategy = new QLearningStrategy();
     }
@@ -154,8 +183,8 @@ export class AIOpponent {
    * @param board Current game board
    * @returns Column index (0-4) for the best move
    */
-  public getBestMove(board: number[][]): number {
-    return this.strategy.getBestMove(board);
+  public async getBestMove(board: number[][]): Promise<number> {
+    return await Promise.resolve(this.strategy.getBestMove(board));
   }
   
   /**
@@ -169,12 +198,17 @@ export class AIOpponent {
   
   /**
    * Change the AI strategy
-   * @param strategyType The type of strategy to use ('qlearning' or 'mcts')
-   * @param mctsSimulations Number of simulations for MCTS (only used if strategy is 'mcts')
+   * @param strategyType The type of strategy to use ('qlearning', 'mcts', or 'groq')
+   * @param options Additional options for the strategy
    */
-  public setStrategy(strategyType: 'qlearning' | 'mcts', mctsSimulations: number = DEFAULT_MCTS_SIMULATIONS): void {
+  public setStrategy(
+    strategyType: 'qlearning' | 'mcts' | 'groq', 
+    options: { mctsSimulations?: number, groqApiKey?: string, groqModel?: string } = {}
+  ): void {
     if (strategyType === 'mcts') {
-      this.strategy = new MCTSStrategy(mctsSimulations);
+      this.strategy = new MCTSStrategy(options.mctsSimulations || DEFAULT_MCTS_SIMULATIONS);
+    } else if (strategyType === 'groq') {
+      this.strategy = new GroqStrategy(options.groqApiKey, options.groqModel);
     } else {
       this.strategy = new QLearningStrategy();
     }
@@ -183,5 +217,26 @@ export class AIOpponent {
     this.strategy.setIsPlayerTwo(this.isPlayerTwo);
     
     streamDeck.logger.info(`Switched to ${strategyType} strategy`);
+  }
+  
+  /**
+   * Configure the current strategy with additional options
+   * @param options Options specific to the current strategy
+   */
+  public configureStrategy(options: {
+    mctsSimulations?: number,
+    groqApiKey?: string,
+    groqModel?: string
+  }): void {
+    if (this.strategy instanceof MCTSStrategy && options.mctsSimulations) {
+      (this.strategy as MCTSStrategy).setSimulationCount(options.mctsSimulations);
+    } else if (this.strategy instanceof GroqStrategy) {
+      if (options.groqApiKey) {
+        (this.strategy as GroqStrategy).setApiKey(options.groqApiKey);
+      }
+      if (options.groqModel) {
+        (this.strategy as GroqStrategy).setModel(options.groqModel);
+      }
+    }
   }
 }

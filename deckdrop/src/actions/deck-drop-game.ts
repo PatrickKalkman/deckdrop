@@ -16,8 +16,10 @@ type GameSettings = {
   vsAI: boolean;
   aiIsPlayerTwo: boolean;
   player?: string;
-  aiStrategy?: 'qlearning' | 'mcts';
+  aiStrategy?: 'qlearning' | 'mcts' | 'groq';
   mctsSimulations?: number;
+  groqApiKey?: string;
+  groqModel?: string;
 };
 
 type CoordinateKey = string;
@@ -221,7 +223,7 @@ export class DeckDropGame extends SingletonAction<GameSettings> {
         needsReset = true;
       }
       
-      // Handle AI strategy and simulation count
+      // Handle AI strategy and related settings
       let strategyChanged = false;
       if (settings?.aiStrategy) {
         const strategy = settings.aiStrategy;
@@ -230,13 +232,39 @@ export class DeckDropGame extends SingletonAction<GameSettings> {
         needsReset = true;
       }
       
-      // Check for simulation count changes, either directly or as part of strategy change
-      if (settings?.mctsSimulations || strategyChanged) {
-        const simulations = settings?.mctsSimulations || 500; // Match HTML default
-        const strategy = settings?.aiStrategy || 'mcts'; // Default if not specified
-        
-        streamDeck.logger.info(`MCTS simulations set to: ${simulations}`);
-        this.gameLogic.setAIStrategy(strategy, simulations);
+      // Prepare options for AI strategy
+      const strategyOptions: {
+        mctsSimulations?: number;
+        groqApiKey?: string;
+        groqModel?: string;
+      } = {};
+      
+      // Handle MCTS simulations
+      if (settings?.mctsSimulations) {
+        strategyOptions.mctsSimulations = settings.mctsSimulations;
+        streamDeck.logger.info(`MCTS simulations set to: ${settings.mctsSimulations}`);
+      }
+      
+      // Handle Groq API key
+      if (settings?.groqApiKey) {
+        strategyOptions.groqApiKey = settings.groqApiKey;
+        streamDeck.logger.info(`Groq API key updated`);
+      }
+      
+      // Handle Groq model
+      if (settings?.groqModel) {
+        strategyOptions.groqModel = settings.groqModel;
+        streamDeck.logger.info(`Groq model set to: ${settings.groqModel}`);
+      }
+      
+      // Apply strategy changes
+      if (strategyChanged) {
+        const strategy = settings?.aiStrategy || 'mcts';
+        this.gameLogic.setAIStrategy(strategy, strategyOptions);
+        needsReset = true;
+      } else if (Object.keys(strategyOptions).length > 0) {
+        // If only options changed but not the strategy itself
+        this.gameLogic.configureAIStrategy(strategyOptions);
         needsReset = true;
       }
       

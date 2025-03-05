@@ -20,23 +20,45 @@ export class GameLogic {
 
   private gameOverCallback?: () => void;
   
-  constructor(strategyType: 'qlearning' | 'mcts' = 'mcts', mctsSimulations: number = DEFAULT_MCTS_SIMULATIONS) {
-    // Create the AI opponent with the specified strategy, defaulting to MCTS with 10,000 simulations
-    this.aiOpponent = new AIOpponent(strategyType, mctsSimulations);
+  constructor(strategyType: 'qlearning' | 'mcts' | 'groq' = 'mcts', 
+              options: { mctsSimulations?: number, groqApiKey?: string, groqModel?: string } = {}) {
+    // Create the AI opponent with the specified strategy
+    this.aiOpponent = new AIOpponent(strategyType, options);
     streamDeck.logger.info(`Created AI Opponent with ${strategyType} strategy`);
   }
 
   /**
    * Set the AI strategy to use
-   * @param strategy The strategy to use ('qlearning' or 'mcts')
-   * @param mctsSimulations Number of simulations for MCTS
+   * @param strategy The strategy to use ('qlearning', 'mcts', or 'groq')
+   * @param options Additional options for the strategy
    */
-  public setAIStrategy(strategy: 'qlearning' | 'mcts', mctsSimulations: number = DEFAULT_MCTS_SIMULATIONS): void {
+  public setAIStrategy(
+    strategy: 'qlearning' | 'mcts' | 'groq', 
+    options: { mctsSimulations?: number, groqApiKey?: string, groqModel?: string } = {}
+  ): void {
     // Update the AI opponent's strategy
-    this.aiOpponent.setStrategy(strategy, mctsSimulations);
+    this.aiOpponent.setStrategy(strategy, options);
     
-    streamDeck.logger.info(`Set AI strategy to ${strategy}` + 
-      (strategy === 'mcts' ? ` with ${mctsSimulations} simulations` : ''));
+    let logMessage = `Set AI strategy to ${strategy}`;
+    if (strategy === 'mcts' && options.mctsSimulations) {
+      logMessage += ` with ${options.mctsSimulations} simulations`;
+    } else if (strategy === 'groq') {
+      logMessage += ` with model ${options.groqModel || DEFAULT_GROQ_MODEL}`;
+    }
+    
+    streamDeck.logger.info(logMessage);
+  }
+  
+  /**
+   * Configure the current AI strategy with additional options
+   * @param options Options specific to the current strategy
+   */
+  public configureAIStrategy(options: {
+    mctsSimulations?: number,
+    groqApiKey?: string,
+    groqModel?: string
+  }): void {
+    this.aiOpponent.configureStrategy(options);
   }
   
   /**
@@ -129,35 +151,45 @@ export class GameLogic {
     if (this.vsAI && !this.gameOver && 
         ((this.aiOpponent.isPlayerTwo && this.currentPlayer === PLAYER_TWO) || 
          (!this.aiOpponent.isPlayerTwo && this.currentPlayer === PLAYER_ONE))) {
-      setTimeout(() => this.makeAIMove(), this.aiDelay);
+      setTimeout(() => {
+        this.makeAIMove().catch(error => {
+          streamDeck.logger.error(`Error in scheduled AI move: ${error}`);
+        });
+      }, this.aiDelay);
     }
     
     return true;
   }
   
-  private makeAIMove(): void {
+  private async makeAIMove(): Promise<void> {
     if (this.gameOver) return;
     
-    const aiColumn = this.aiOpponent.getBestMove(this.board);
-    if (aiColumn >= 0 && aiColumn < 5) {
-      streamDeck.logger.info(`AI is making move in column ${aiColumn}`);
+    try {
+      // Get the AI's move (now async)
+      const aiColumn = await this.aiOpponent.getBestMove(this.board);
       
-      // Important: Use the stored onWinHandler directly 
-      // to ensure same callback for both players
-      const moveResult = this.makeMove(aiColumn, this.onWinHandler || (() => {}));
-      
-      // Ensure the board is rendered after AI makes a move
-      if (this.renderCallback) {
-        this.renderCallback(this.board);
+      if (aiColumn >= 0 && aiColumn < 5) {
+        streamDeck.logger.info(`AI is making move in column ${aiColumn}`);
+        
+        // Important: Use the stored onWinHandler directly 
+        // to ensure same callback for both players
+        const moveResult = this.makeMove(aiColumn, this.onWinHandler || (() => {}));
+        
+        // Ensure the board is rendered after AI makes a move
+        if (this.renderCallback) {
+          this.renderCallback(this.board);
+        }
+        
+        // If the game is now over, trigger the game over callback
+        if (moveResult && this.gameOver && this.gameOverCallback) {
+          streamDeck.logger.info("AI move ended the game, triggering game over callback");
+          this.gameOverCallback();
+        }
+      } else {
+        streamDeck.logger.error(`AI returned invalid column: ${aiColumn}`);
       }
-      
-      // If the game is now over, trigger the game over callback
-      if (moveResult && this.gameOver && this.gameOverCallback) {
-        streamDeck.logger.info("AI move ended the game, triggering game over callback");
-        this.gameOverCallback();
-      }
-    } else {
-      streamDeck.logger.error(`AI returned invalid column: ${aiColumn}`);
+    } catch (error) {
+      streamDeck.logger.error(`Error during AI move: ${error}`);
     }
   }
 
@@ -223,7 +255,11 @@ export class GameLogic {
     // If AI is player 1, make AI move after ensuring board is rendered
     if (this.vsAI && !this.aiOpponent.isPlayerTwo) {
       streamDeck.logger.info('Scheduling AI move after reset');
-      setTimeout(() => this.makeAIMove(), this.aiDelay);
+      setTimeout(() => {
+        this.makeAIMove().catch(error => {
+          streamDeck.logger.error(`Error in AI move after reset: ${error}`);
+        });
+      }, this.aiDelay);
     }
   }
   
